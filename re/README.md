@@ -31,12 +31,12 @@ separately from `app/` and is never packaged or compiled into any APK.
   `com.nothing.*.core.device.IOTEar*GestureAction`, `ControlGestureViewModel`,
   `ControlItemViewModel`, `SmartDialUtil`, `ControlConfigurationEntity`). Key facts:
   - Everything (earbud slots + case button + smart dial) is one key-config packet
-    `[count, (device, button, gesture, operation) x count]` via 0xC018/0xF003; device 1=case,
-    2=left, 3=right.
+    `[count, (device, button, gesture, operation) x count]` via 0xC018/0xF003; device 2=left,
+    3=right, 4=case (source-verified in `ControlItemViewModel.convertOptions`).
   - `supportSmartDial()` true only on Espeon (B172) + Heracross.
   - Per-model trigger sets and dial assignment lists (espeon case: single {2,9,8,11,17},
-    hold {22,11,17}, double {3,25,1}, triple {26,1}, rotate {23=volume control,1}) — full write-up
-    in `control-and-smart-dial.md` on the Nothing-x-open re/ docs.
+    hold {22,11,17}, double {3,25,1}, triple {26,1}, rotate {23=volume control,1}) — full
+    source-verified write-up in `SMART_DIAL.md`.
 - `dig-matched.tar.gz` — filtered matchup archive produced by the GitHub Actions dig workflow
   (`Nothing-x-open/.github/workflows/dig-directed.yml`); now includes the control-src tree.
 - `nothing-x-dex.zip` — the eight DEX files of a recent Nothing X release; the raw input used by
