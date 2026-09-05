@@ -122,12 +122,22 @@ Control UI:
             button = dialog.getButton() ?: op.getButton()
             EspeonSppProtocol.setGestureData(op, newOp, button)       (l=156, returns Boolean)
             on true: setVisibleOrGoneNoiseSubItems + onClickSelectedOperation (UI refresh)
-      → (EspeonSppProtocol body not in artifact — see Gaps)
-        earbase layer (PROVEN):
-          DeviceProtocol.setGestureData(bundle, operation, newOp, cont)   ear/base/os/DeviceProtocol.java:115-125
-            payload = ByteBuffer.allocate(5):
-              01  device  button  gesture  newOperation                (count=1, then 4 bytes)
-            TWSDevice.syncSet(twsDevice, 0xF003 SET_KEY_CONFIGURATION, payload, ...)
+
+  EspeonSppProtocol is CONFIRMED a thin subclass of BaseSppProtocol with ONLY
+  (getDetailPageData, getDebugPageData, getConfiguration, syncUtcTime, getDualEnable, setDualEnable);
+  setGestureData / resetGestureData / getGestureData are NOT overridden → pure inheritance.
+  (proto/com/nothing/espeon/core/protocol/EspeonSppProtocol.java:54-56 ctor, 58-98 methods)
+  Ctor: EspeonSppProtocol(address) → super(address, IOTProductDeviceEspeon.EAR_ID).
+
+  → BaseSppProtocol.setGestureData(op, newOp, button, cont)   ear/spp/BaseSppProtocol.java:362-404
+      if button == -1 → button = op.getButton()
+      payload = ControlConfigurationEntity(Operation(dev, btn, gest, newOp)).obtainDataPacket()
+              = [01 dev btn gest newOp]                        (count=1, then 4 bytes)
+      TWSDeviceExtKt.keyConfiguration(twsDevice)               (get 0xC018 / set 0xF003)
+      → builder.setSync(payload, cont)                         TWSDeviceBuilder.java:379-410
+        → sendSyncResponse(isGet=false) → TWSDevice.syncSetResponse(tws, 0xF003, ...)
+        → HeadsetSppConnector.syncSend(0xF003, payload)        (see §7)
+        → returns Message.isOk() (rspCode==0) as Boolean
 ```
 
 ANC variant (`setAncGestureData`, used by Noise-cancellation/Transparency/Off rows):
@@ -153,25 +163,69 @@ ControlViewModel.resetGestureData()                                     ControlV
 
 ## 7. Configuration → wire details (CONFIRMED)
 
+### Command IDs
+
 - Command IDs (ProtocolConstant, `KEY_CONFIGURATION` renamed `GET_ln`/`SET_ln` by the decompiler):
   - **Query `GET_KEY_CONFIGURATION = 0xC018 (49176)`**
   - **Set `SET_KEY_CONFIGURATION  = 0xF003 (61443)`**
 - `TWSDeviceExtKt.keyConfiguration(twsDevice)` wires the builder: `getCommand(0xC018)` + `setCommand(0xF003)`
   (com/nothing/core/ext/TWSDeviceExtKt.java:546-552). Used by `ControlViewModel.listenerLiveData`.
 - Payload builder (all sources agree, `1 + 4N` bytes):
-  - single-slot set: `[0x01, device, button, gesture, operation]` — `DeviceProtocol.setGestureData` (ear/base/os/DeviceProtocol.java:115-125).
-  - full set/reset: `ControlConfigurationEntity.obtainDataPacket()` = `[count, (device, button, gesture, operation) × count]`
-    (earbase/control/entity/ControlConfigurationEntity.java:183-194).
-- Byte order: single-byte fields, `ByteBuffer` default big-endian irrelevant; no multi-byte fields.
-  All fields ≤ 255, `put((byte) value)`.
+  - single-slot set: `[0x01, device, button, gesture, operation]` — `ControlConfigurationEntity.obtainDataPacket()`
+    (earbase/control/entity/ControlConfigurationEntity.java:183-194); identical to the 5-byte form produced by
+    `DeviceProtocol.setGestureData` (ear/base/os/DeviceProtocol.java:115-125) used on the parallel earbase-OS route.
+  - full set/reset: `[count, (device, button, gesture, operation) × count]`.
 - Device codes on the wire equal the app-internal codes (no translation):
   **2 = left bud, 3 = right bud, 4 = case/dial**
   (`ControlItemViewModel.convertOptions`, espeon ControlItemViewModel.java:216-232; lock op `Operation(4,1,15,40)`; read-back pairing `getDevice()==4`).
-- No case-BLE involvement: smart-dial config travels over the main earbud SPP link (`TWSDevice.syncSet`)
-  like every other control. Case-BLE (`NtCaseBleApi`/`XCaseBleConnector`, `case-src/`) is used for box LEDs,
-  wake, OTA — not for key-config.
-- After a save the case UI displays "case restarts to apply" (dialog/UX); the ear relays the config to the case
-  over the ear↔case link — relay firmware behavior is outside this artifact (UNKNOWN).
+
+### Frame format on the BLE GATT link (CONFIRMED, 3 independent sources)
+
+`Message.obtainDataPacket()` (proto/com/nothing/protocol/model/Message.java:295-322 + parser
+parse:79-99), written via `XConnector.writeWithTask`, and re-verified by the receive parser
+`XDefaultParser.getReceiveCommand` (proto2/com/nothing/link/bluetooth/sdk/connect/tranform/XDefaultParser.java:60-80):
+
+```
+byte 0        SOF      0x55
+byte 1..2     control  LE 16b: bits0-4 rspCode | bit5 CRC present | bit6 multiFrame | (deviceType<<8)&0x0F00
+byte 3..4     command   LE 16b: write uses raw id (0xF003); response wires bit15 (0x8000)
+byte 5..6     length    LE 16b: payload byte count only (no header/frame)
+byte 7        fsn       seq = createFsn() (AtomicInteger, wraps to 0 after 254);
+                         matched only when isNeedFsn set; syncSet always sets it
+byte 8..      payload   (length bytes)
++length+8..2  CRC-16 LE  only when control bit5 set
+frameLen = length + 8,  (+10 when CRC present)
+```
+
+- **Transport** is BLE GATT, not RFCOMM: the link SDK writes to
+  SERVICE `0000fd90-0000-1000-8000-00805f9b34fb`, WRITE `68745353-1810-4b13-83a2-c1b21b652c9b`,
+  notify `ca235943-1810-45e6-8326-fc8ca3bc45ce` (`NtPeerLinkBleUuids`, case-src). "SPP" is nominal.
+- **Devices**: Espeon deviceType = 1 (IOTProductDeviceEspeon.EAR_ID), no payload-endpoint byte
+  (`getPayloadEndpointType()` null) — the frame shown below is exact for Espeon.
+- **FSN**: syncSet/syncSend generate `createFsn()` per write; responses are matched by key
+  `responseCommand + "_" + fsn` (HeadsetSppConnector.java:822-827) with 5 s timeout.
+- **CRC** (`Utils.obtainCrc16`, proto2/com/nothing/base/util/Utils.java:356-366):
+  CRC-16/ARC, init 0xFFFF, poly 0xA001, reflected per-byte:
+  `crc=(crc&0xFFFF)^(byte); 8× {crc=lsb? (crc>>1)^0xA001 : crc>>1}` — no final XOR. Stored little-endian.
+- **Timing** (XConnector.writeWithTask): 100 ms between writes, 5000 ms default response timeout, retry list.
+
+### Worked frames (lock row: device 4, button 1, gesture 15, op 40)
+
+```
+SET 0xF003 (14 bytes), fsn=F, crc bit set:
+  55 60 01  03 F0  05 00  0F  01 04 0F 28  58 6C
+  SOF ctlLE cmdLE lenLE fsn payload        CRC16-LE
+  ctl 0x0160 = rspCode0 | crc(0x20) | multi(0x40) | (1<<8)
+  CRC16 = obtainCrc16([55 60 01 03 F0 05 00 0F 01 04 0F 28]) = 0x6C58
+
+QUERY 0xC018 (10 bytes), fsn=F, crc bit set:
+  55 60 01  18 C0  00 00  0F        B8 D9
+  payload length 0; CRC16 = obtainCrc16([55 60 01 18 C0 00 00 0F]) = 0xD9B8
+  response: same header, cmd bit15 set (0x8018), rspCode in ctl bits0-4
+```
+
+Read-back response payload for N slots = `[count, (dev,btn,gest,op)×count]`, parsed by
+`DataExtKt.toMultiValues(payload, 1,1,1,1,1)` (see §8).
 
 ## 8. Read-back (CONFIRMED at app layer)
 
@@ -194,8 +248,15 @@ listenerLiveData():
 ```
 
 App-side `getGestureData` actually sends `sendCommands([0xC018])` via `TWSDevice`
-(ear/base/os/DeviceProtocol.java:107-113), and the reply payload is parsed in `ControlConfigurationEntity(byte[])`
-using `DataExtKt.toMultiValues(payload, 1,1,1,1,1)` (see Gaps).
+(ear/base/os/DeviceProtocol.java:107-113). The reply payload is parsed in `ControlConfigurationEntity(byte[])`
+(earbase/control/entity/ControlConfigurationEntity.java:104-114) using
+`DataExtKt.toMultiValues(payload, 1,1,1,1,1)` (proto/com/nothing/base/util/ext/DataExtKt.java:560-570):
+count + per-row `(dev, btn, gest, op)` through the 1-byte `toInt` unsigned getter (`byte & 0xFF`,
+DataExtKt.java:459-467, 630-639), assembled into `Operation(i[0..3])`.
+
+**Signedness RESOLVED (UNSIGNED)**: 1-byte reads use `data[offset] & 0xFF` — so op byte `0xFF` reads back **255**,
+never -1. This matches the girafarig op→string switch `case 255: volumeControl` and the
+`OPERATION_VOLUME_DOWN_OR_UP = 255` constant. (Two-byte reads are little-endian: `(b1<<8)|b0`.)
 
 ## 9. Default configuration
 
@@ -230,27 +291,29 @@ Models without the espeon case builders only show framework rows (no dial).
 - Operation-ID reuse: **10 vs 20/21/22** (noise-control family) collapse to the same UI string;
   **6/7 vs 18/19** (volume up/down) are alias pairs; **23 vs 255** both render "Volume control".
   These are the only collisions found.
-- Endianness: single-byte fields only; none >255 sent. No endianness hazard.
-- Signedness: write uses `put((byte) op)`; ops up to 255 → 0xFF. On read-back, `DataExtKt`
-  unsigned vs signed conversion is **not visible in the artifact** (UNKNOWN). op 255 compare
-  depends on it.
-- Packet length: `1+4N` (single set = 5 bytes) — confirmed by `ByteBuffer.allocate(5)` and `allocate((size*4)+1)`.
-- CRC/checksum: none inside the payload; encoding of TWSDevice frames (any checksum/seq) lives in
-  `com.nothing.protocol.*` which is not in this artifact — **UNKNOWN**.
+- Endianness: frame header fields (control/command/length/CRC) are little-endian (Message.java + XDefaultParser);
+  payload bytes are single-byte fields. All confirmed.
+- Signedness: write uses `put((byte) op)`; ops up to 255 → 0xFF. Read-back `DataExtKt.toMultiValues` is
+  **UNSIGNED** (`byte & 0xFF`), so op 255 reads back 255 → matches `case 255`. RESOLVED.
+- Packet length: `1+4N` (single set = 5 bytes) — confirmed by `ControlConfigurationEntity.obtainDataPacket`.
+- Frame on link: `[0x55 SOF][ctl16 LE][cmd16 LE][len16 LE][fsn][payload][crc16 LE]`, opts in ctl bits —
+  CRC-16/ARC (0xA001, init 0xFFFF). RESOLVED (§7).
 - Value translation before send: YES — ANC rows write the resolved sub-op (0/20/21/22) via
   `setAncGestureData`/`convertAnc`; call rows + lock handled separately; otherwise op is sent raw.
 - Separate case protocol for smart dial: NO — same 0xF003 key-config channel as buds.
 
-## 12. Gaps (UNKNOWN / unverifiable from this artifact)
+## 12. Gaps / not verifiable from this artifact
 
-- `EspeonSppProtocol` / `EspeonProtocol` class bodies absent (imported; `setGestureData` /
-  `resetGestureData` signatures recovered from callers). The earbase layer they sit on is fully proven
-  (`DeviceProtocol`, `TWSDeviceExtKt.keyConfiguration`), so the missing hop is thin.
-- `DataExtKt.toMultiValues` / `toInt` bodies absent → read-back signedness unproven.
-- `TWSDevice.syncSet/sendCommands/sendMessage` and transport framing internals absent
-  (`com.nothing.protocol.*`) → physical link + any framing checksum unproven (SPP by construction).
-- Ear↔case relay behavior after 0xF003 ("case reboots") is firmware — not in app code.
-- `BaseSppProtocol` used by the ANC path; its body is also absent (only @Metadata).
+- Ear↔case relay in firmware: after `0xF003` the app shows "case restarts to apply"; the ear relays the config
+  to the case over the ear↔case link. Relay framing/behavior is firmware, not in this app artifact.
+- Physical GATT stack / SparkLink transport scheduling below `XConnector` — app code ends at `writeWithTask`.
+- Behavior of `0xF003` is inferred from DeviceProtocol/Builder wiring + the ANC alias rows writing 0/20/21/22,
+  which are themselves read back through the same channel (self-consistent). No live-device capture was done.
+- Office/call "smart dial" V1 models (flare/c'dim/Martian) — app-level gates exist but were not traced in depth.
+
+Resolved from earlier drafts: EspeonSppProtocol hop (now in artifact), `DataExtKt` signedness (UNSIGNED),
+body of `TWSDevice.syncSet/sendMessage/syncSend` + frame format + CRC/seq (now in proto-src/proto2-src),
+`BaseSppProtocol` body (now in control-src, ANC path included).
 
 ## 13. Source index (key files)
 
@@ -258,11 +321,20 @@ Models without the espeon case builders only show framework rows (no dial).
 - `control-src/com/nothing/espeon/control/ControlItemViewModel.java` — earbud/case arrays:34-42; convertOptions device codes:216-232; rotate:178-195; case helpers + defaults.
 - `control-src/com/nothing/espeon/control/ControlCaseOperationActivity.java` — UI entry:141; ANC:223-260.
 - `control-src/com/nothing/espeon/control/ControlViewModel$setGestureData$1$1.java` — save hop.
+- `control-src/com/nothing/earbase/spp/BaseSppProtocol.java` — getGestureData 291-298; setGestureData:362-404; reset:set-ops.
 - `control-src/com/nothing/earbase/os/DeviceProtocol.java:107-125` — 0xC018 query + 5-byte 0xF003 set payload.
 - `control-src/com/nothing/core/ext/TWSDeviceExtKt.java:546-552` — keyConfiguration builder.
-- `control-src/com/nothing/earbase/control/entity/ControlConfigurationEntity.java:183-194` — obtainDataPacket.
+- `control-src/com/nothing/earbase/control/entity/ControlConfigurationEntity.java` — obtainDataPacket:183-194; ctor parse:104-114.
 - `control-src/com/nothing/{espeon,gligar}/core/device/IOTEar*GestureAction.java:26,43` — caseGestures.
-- `control-src/com/nothing/girafarig/control/ControlItemViewModel.java:260-344` — op→string switch.
+- `control-src/com/nothing/girafarig/control/ControlItemViewModel.java:260-344` — op→string switch (incl. case 255).
 - `control-src/com/nothing/base/protocol/constant/ProtocolConstant.java` — GET_ln=49176 (0xC018), SET_ln=61443 (0xF003).
 - `control-src/com/nothing/{espeon,heracross}/core/device/IOTProductDevice*.java` + base — supportSmartDial.
+- `proto-src/com/nothing/espeon/core/protocol/EspeonSppProtocol.java` — subclass, NO gesture overrides.
+- `proto-src/com/nothing/espeon/core/protocol/device/EspeonProtocol.java` — deviceType=1, SPP UUID AEAC4A03-DFF5-498F-843A-34487CF133EB, activation, payload-endpoint null.
+- `proto-src/com/nothing/protocol/device/TWSDevice.java` (1964 ln) + `TWSDeviceBuilder.java` (1228 ln) — syncSet/syncSetResponse/receive; build() wiring.
+- `proto-src/com/nothing/protocol/connector/HeadsetSppConnector.java` — sendMessage:700-708; syncSend:858-901; writeWithTask:755/885; fsn match-key:822-827.
+- `proto-src/com/nothing/protocol/model/Message.java` — frame build 295-322, parse 79-99, fsn 254-wrap.
+- `proto-src/com/nothing/base/util/ext/DataExtKt.java` — toMultiValues:560-570; unsigned one-byte getIntOrZero:459-467.
+- `proto2-src/com/nothing/base/util/Utils.java` — obtainCrc16:356-366 (CRC-16/ARC, 0xA001/0xFFFF).
+- `proto2-src/com/nothing/link/bluetooth/sdk/connect/tranform/XDefaultParser.java:60-80` — receive-side frame validation (SOF 0x55, len+8/+10).
 - `control-src/com/nothing/earbase/control/SmartDialUtil.java` — tips gate.
