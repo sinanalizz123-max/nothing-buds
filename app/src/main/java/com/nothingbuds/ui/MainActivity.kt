@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
                             EQScreen(
                                 state = state,
                                 onSetPreset = { preset -> budsService?.setEqPreset(preset) },
+                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
                                 onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
                                 onBack = { navController.popBackStack() }
                             )

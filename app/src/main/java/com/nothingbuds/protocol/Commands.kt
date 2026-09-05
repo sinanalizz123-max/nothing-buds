@@ -161,9 +161,10 @@ enum class AncMode(val value: Byte) {
 }
 
 /**
- * EQ presets for [Commands.SET_EQ]. Values follow the official app's `initSimpleEQItem()`
- * (CONFIRMED): 0 Balanced, 1 More Voice, 2 More Treble, 3 More Bass, 5 Custom. The declared
- * order also drives the order they are shown in the equalizer screen.
+ * EQ presets for [Commands.SET_EQ] on the simple-equalizer models (CMF Buds 2 Plus & friends).
+ * Values follow the official app's `initSimpleEQItem()` (CONFIRMED): 0 Balanced, 1 More Voice,
+ * 2 More Treble, 3 More Bass, 5 Custom. The declared order also drives the order they are shown
+ * in the equalizer screen. Dirac-Opteo models (B172/B168) use [DiracEqPreset] instead.
  */
 enum class EqPreset(val value: Byte) {
     BALANCED(0x00),
@@ -177,27 +178,43 @@ enum class EqPreset(val value: Byte) {
         private val BY_VALUE: Map<Int, EqPreset> by lazy { entries.associateBy { it.value.toInt() } }
 
         fun fromValue(value: Int): EqPreset = BY_VALUE[value] ?: BALANCED
+    }
+}
 
-        /**
-         * Dirac models (B172 / B168) use the Dirac Opteo EQ as their whole equalizer (0xC050/0xF01D),
-         * with levels 0..5 for the named presets and 6 for custom — the generic 0xF010 preset command
-         * is not applied by these earbuds. Map each UI preset onto its Dirac level.
-         */
-        fun toDiracLevel(preset: EqPreset): Int = when (preset) {
-            BALANCED -> 0
-            VOICE -> 1
-            MORE_TREBLE -> 2
-            MORE_BASS -> 3
-            CUSTOM -> 6
+/**
+ * EQ presets for the Dirac-Opteo models (CMF Buds Pro 2 B172, CMF Buds B168), taken from the
+ * official app's `EqualizerViewModel.initSoundTypes()` (CONFIRMED from the decompiled Nothing X
+ * sources). On these devices the whole equalizer is carried by the Dirac Opteo EQ
+ * (0xC050 read / 0xF01D write), and Dirac Opteo itself is just the first preset row — exactly like
+ * every other EQ profile. Level 0 is Dirac Opteo, 1 Rock, 2 Electronic, 3 Pop, 4 Enhance Vocals,
+ * 5 Classical and 6 Custom; [type] is the value placed in the 0xF01D payload.
+ *
+ * Display order matches the official app: Dirac Opteo, Pop, Rock, Classical, Electronic,
+ * Enhance Vocals, Custom.
+ */
+enum class DiracEqPreset(val type: Int) {
+    OPTEO(0),
+    POP(3),
+    ROCK(1),
+    CLASSICAL(5),
+    ELECTRONIC(2),
+    ENHANCE_VOCALS(4),
+    CUSTOM(6);
+
+    val displayName: String
+        get() = when (this) {
+            OPTEO -> "Dirac Opteo"
+            POP -> "Pop"
+            ROCK -> "Rock"
+            CLASSICAL -> "Classical"
+            ELECTRONIC -> "Electronic"
+            ENHANCE_VOCALS -> "Enhance Vocals"
+            CUSTOM -> "Custom"
         }
 
-        /** Dirac reading (0xC050) → the UI preset closest to what the earbuds have active. */
-        fun fromDiracLevel(level: Int): EqPreset = when (level) {
-            1 -> VOICE
-            2 -> MORE_TREBLE
-            3 -> MORE_BASS
-            6 -> CUSTOM
-            else -> BALANCED
-        }
+    companion object {
+        /** Level → preset, for mapping a 0xC050 reading back to a row. Unknown levels read as Opteo. */
+        fun fromLevel(level: Int): DiracEqPreset =
+            entries.firstOrNull { it.type == level } ?: OPTEO
     }
 }

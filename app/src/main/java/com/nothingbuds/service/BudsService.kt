@@ -884,15 +884,10 @@ class BudsService : Service() {
             Commands.RESPONSE_DIRAC_EQ -> {
                 val dirac = ResponseParser.parseDiracEq(response.payload)
                 Log.d(TAG, "Dirac EQ: preset=$dirac")
-                // On Dirac models the Dirac level is the active equalizer state; keep the UI
-                // preset in sync with what the earbuds actually have.
-                if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
-                    updateState {
-                        it.copy(diracEq = dirac, eqPreset = EqPreset.fromDiracLevel(dirac))
-                    }
-                } else {
-                    updateState { it.copy(diracEq = dirac) }
-                }
+                // The 0xC050 reading is an active Dirac-Opteo level (0 Dirac Opteo, 1 Rock,
+                // 2 Electronic, 3 Pop, 4 Enhance Vocals, 5 Classical, 6 Custom); the EQ screen
+                // maps it back to a row via DiracEqPreset.fromLevel().
+                updateState { it.copy(diracEq = dirac) }
             }
 
             Commands.ACK_SET_DUAL -> {
@@ -1045,33 +1040,16 @@ class BudsService : Service() {
 
     fun setEqPreset(preset: EqPreset) {
         Log.d(TAG, "Setting EQ preset: $preset")
-        if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
-            // Dirac models (B172/B168) run the Dirac Opteo EQ as their whole equalizer through
-            // 0xF01D; the generic 0xF010 preset command is accepted but not applied by them,
-            // which is why presets used to "do nothing" on the CMF Buds Pro 2.
-            val level = EqPreset.toDiracLevel(preset)
-            Log.d(TAG, "Dirac-level EQ preset: $preset -> level $level")
-            sendCommand(PacketBuilder.setDiracEq(level))
-            updateState { it.copy(eqPreset = preset, diracEq = level) }
-        } else {
-            sendCommand(PacketBuilder.setEq(preset))
-            updateState { it.copy(eqPreset = preset) }
-        }
+        // Simple-equalizer models only. Dirac-Opteo models (B172/B168) run the whole equalizer
+        // through 0xF01D instead and write via setDiracEq() with a DiracEqPreset level.
+        sendCommand(PacketBuilder.setEq(preset))
+        updateState { it.copy(eqPreset = preset) }
     }
 
     fun setCustomEq(bands: IntArray) {
         Log.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
-        if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
-            // Entering custom mode on a Dirac model is the 0xF01D level 6 write; the 3-band
-            // ±6 dB float gains (53-byte 0xF041 template) are left untouched until mapped
-            // per-model, so a Dirac write only ever enters/keeps the buds' custom state.
-            Log.d(TAG, "Entering Dirac custom EQ (level 6)")
-            sendCommand(PacketBuilder.setDiracEq(6))
-            updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM, diracEq = 6) }
-        } else {
-            sendCommand(PacketBuilder.setCustomEq(bands))
-            updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
-        }
+        sendCommand(PacketBuilder.setCustomEq(bands))
+        updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
     }
 
     fun setInEarDetection(enabled: Boolean) {

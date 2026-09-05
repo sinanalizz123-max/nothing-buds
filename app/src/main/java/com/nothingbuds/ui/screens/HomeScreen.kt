@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.AncMode
+import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import kotlin.math.roundToInt
 
@@ -423,7 +424,11 @@ private fun SoundCard(
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
-            subtitle = state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() },
+            subtitle = if (state.deviceModel?.hasDiracEq == true) {
+                DiracEqPreset.fromLevel(state.diracEq).displayName
+            } else {
+                state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() }
+            },
             icon = Icons.Default.Equalizer,
         ) {
             FilledTonalButton(onClick = onNavigateToEQ) { Text("Adjust") }
