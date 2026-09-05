@@ -28,9 +28,9 @@ jobs:
 
       - name: Build debug APK
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: wrapper
-          arguments: assembleDebug
+
+      - name: Run assembleDebug
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Archive debug APK
         uses: actions/upload-artifact@v4
