@@ -75,5 +75,58 @@ Verification:
 - The current UI does not yet render the isMagicGesture() styling (that is a separate
   ControlOperationViewModel visual concern). GestureScreen at minimum surfaces the right operation
   ids; the magic styling is out of scope of this task per the source-fidelity success condition.
-Confidence: 100% on data; the visual "magic" indicator on each row is the only piece not yet
-reflected in Compose (it lives in the row template, not in the capability table).
+Task 3 — Case gestures
+STATUS: DONE
+Evidence:
+- Only Espeon (B172) and Heracross (B187, reuses Espeon) have case gesture configuration.
+  re/control-src/com/nothing/espeon/control/ControlViewModel.java:417 calls setCaseGestureData()
+  (the only call across all decompiled models). Girafarig and Gligar have a
+  ControlCaseOperationActivity class but their ControlViewModel never populates case data.
+- Case device id is 4 (0x04): re/control-src/com/nothing/espeon/control/ControlItemViewModel.java
+  line 225 — `} else if (device == 4) { isCase().set(true); ... }`.
+- Case source arrays (re/control-src/com/nothing/espeon/control/ControlItemViewModel.java
+  lines 38–42):
+    CASE_SUPPORT_SINGLE_PRESS        = {2, 9, 8, 11, 17}
+    CASE_SUPPORT_PRESS_HOLD          = {22, 11, 17}
+    CASE_SUPPORT_DOUBLE_PRESS_CALL   = {3, 25, 1}
+    CASE_SUPPORT_TRIPLE_PRESS_CALL   = {26, 1}
+    CASE_SUPPORT_ROTATE              = {23, 1}
+- Each caseSinglePressGesture / casePressHoldGesture appends an extra op 1 at the end, so the
+  rendered list for the case-side gesture row is always the source array + [1].
+- caseDoublePressGesture builds the list as: CASE_SUPPORT_SINGLE_PRESS + [1] +
+  CASE_SUPPORT_DOUBLE_PRESS_CALL = {2, 9, 8, 11, 17, 1, 3, 25, 1}.
+- caseTriplePress builds: CASE_SUPPORT_SINGLE_PRESS + [1] + CASE_SUPPORT_TRIPLE_PRESS_CALL =
+  {2, 9, 8, 11, 17, 1, 26, 1}.
+- All case defaults are `setDefaultOperation(1)` (None).
+Determination:
+- The "suspicious" duplicate op-1 in the double and triple lists is semantically meaningful in the
+  source: the second op 1 is the "None" terminator of the call-operation subsection and must be
+  preserved. We do NOT deduplicate.
+- No other model has usable case configuration despite having case-related UI classes (Girafarig
+  and Gligar). The current ESPEON caseSlots/caseOperations/caseDefaults apply only to B172 and
+  B187; all other profiles correctly have no case slots.
+Changes:
+- No code changes. Verified the existing ESPEON case tables match the source exactly (preserving
+  the intentional op-1 duplicates in the double/triple lists).
+Verification:
+- Cross-referenced case arrays, defaults, and the device-id 0x04 mapping against the decompiled
+  source above.
+- Heracross is proven identical because IOTProductDeviceHeracross.java instantiates EspeonImpl
+  (re/control-src/com/nothing/heracross/device/IOTProductDeviceHeracross.java:143).
+Confidence: 100%.
+
+Task 4 — Unknown model fallback
+STATUS: DONE
+Evidence:
+- The previous FALLBACK profile (2/3/7 with invented ops {8,9,11,1} and {10,11,1}) was not
+  derived from any decompiled source. It would have allowed an unknown model id to expose
+  operations it might not support.
+Determination:
+- Per the prompt: "Prefer: no configurable gestures; clearly unsupported/unknown UI; capability
+  discovery if already available in the architecture."
+Changes:
+- FALLBACK is now GestureProfile(slots = emptyList(), operations = emptyMap(), defaults = emptyMap()).
+  An unknown model renders the empty gesture screen rather than offering an invented operation set.
+Verification:
+- Code-level check of GestureCapabilities.FALLBACK (now empty).
+Confidence: 100%.
