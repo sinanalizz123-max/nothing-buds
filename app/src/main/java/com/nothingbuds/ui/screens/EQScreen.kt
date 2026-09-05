@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
@@ -50,8 +51,8 @@ fun EQScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Dirac Opteo EQ is the equalizer for Dirac models (CMF Buds Pro 2 / CMF Buds). It is
-            // mutually exclusive with the LHDC codec, so it is hidden while the codec is active.
+            // Dirac Opteo for Dirac models (CMF Buds Pro 2 / CMF Buds). The earbuds expose a single
+            // Dirac profile; it is greyed out while the LDAC codec is active.
             if (state.deviceModel?.hasDiracEq == true) {
                 Text(
                     "Dirac Opteo",
@@ -61,50 +62,49 @@ fun EQScreen(
 
                 if (state.lhdc) {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
-                        Text(
-                            "Unavailable while the LHDC codec is on. Turn it off under More to use the Dirac equalizer.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = false,
+                                onClick = null,
+                                enabled = false
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    "Dirac Opteo",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Disabled while the LDAC codec is on",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 } else {
-                    DIRAC_PRESETS.forEach { (level, label) ->
-                        EqPresetItemGeneric(
-                            label = label,
-                            description = "Dirac Opteo preset",
-                            isSelected = selectedDirac == level,
-                            onClick = {
-                                selectedDirac = level
-                                onSetDiracEq(level)
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            // Preset selection for non-Dirac models (Dirac models only answer their own EQ).
-            if (state.deviceModel?.hasDiracEq != true) {
-                Text(
-                    "Presets",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                EqPreset.entries.forEach { preset ->
-                    EqPresetItem(
-                        preset = preset,
-                        isSelected = selectedPreset == preset,
+                    EqPresetItemGeneric(
+                        label = "Dirac Opteo",
+                        description = "Standard Dirac Opteo tuning",
+                        isSelected = selectedDirac >= 1,
                         onClick = {
-                            selectedPreset = preset
-                            onSetPreset(preset)
+                            selectedDirac = 1
+                            onSetDiracEq(1)
                         }
                     )
                 }
@@ -112,8 +112,27 @@ fun EQScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
+            Text(
+                "Presets",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            EqPreset.entries.forEach { preset ->
+                EqPresetItem(
+                    preset = preset,
+                    isSelected = selectedPreset == preset,
+                    onClick = {
+                        selectedPreset = preset
+                        onSetPreset(preset)
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Custom EQ
-            if (state.deviceModel?.hasCustomEq == true && state.deviceModel?.hasDiracEq != true) {
+            if (state.deviceModel?.hasCustomEq == true) {
                 Text(
                     "Custom EQ",
                     style = MaterialTheme.typography.titleMedium,
@@ -254,20 +273,28 @@ private fun EqBandSlider(
             color = if (value != 0) NothingRed else MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = -6f..6f,
-            steps = 11,
+        Box(
             modifier = Modifier
-                .height(120.dp)
-                .width(40.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = NothingRed,
-                activeTrackColor = NothingRed
+                .width(40.dp)
+                .height(120.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Slider(
+                value = value.toFloat(),
+                onValueChange = { onValueChange(it.toInt()) },
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = -6f..6f,
+                steps = 11,
+                modifier = Modifier
+                    .width(120.dp)
+                    .height(36.dp)
+                    .graphicsLayer { rotationZ = 90f },
+                colors = SliderDefaults.colors(
+                    thumbColor = NothingRed,
+                    activeTrackColor = NothingRed
+                )
             )
-        )
+        }
     }
 }
 
@@ -290,21 +317,6 @@ private fun getPresetDescription(preset: EqPreset): String {
         EqPreset.CUSTOM -> "Your custom equalizer settings"
     }
 }
-
-/**
- * Dirac Opteo preset levels 0..5 (named) + 6 custom. The exact display names are model-specific
- * (recovered from the official app only as "Dirac Opteo"), so the numeric order is shown until a
- * per-model name table is recovered.
- */
-private val DIRAC_PRESETS = listOf(
-    0 to "Opteo preset 0",
-    1 to "Opteo preset 1",
-    2 to "Opteo preset 2",
-    3 to "Opteo preset 3",
-    4 to "Opteo preset 4",
-    5 to "Opteo preset 5",
-    6 to "Custom",
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

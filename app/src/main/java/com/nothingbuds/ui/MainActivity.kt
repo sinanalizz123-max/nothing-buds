@@ -121,10 +121,14 @@ class MainActivity : ComponentActivity() {
                             val pairedDevices = remember(isBound) {
                                 budsService?.getPairedDevices() ?: emptyList()
                             }
+                            val connectedAdapters = remember(isBound, state.isConnected) {
+                                budsService?.getConnectedDevices() ?: emptySet()
+                            }
 
                             DeviceListScreen(
                                 pairedDevices = pairedDevices,
                                 currentState = state,
+                                connectedAdapters = connectedAdapters,
                                 onDeviceSelected = { device ->
                                     Log.d(TAG, "Device selected: ${device.name}")
                                     budsService?.connect(device.address)

@@ -23,6 +23,7 @@ import com.nothingbuds.data.EarbudsState
 fun DeviceListScreen(
     pairedDevices: List<BluetoothDevice>,
     currentState: EarbudsState,
+    connectedAdapters: Set<String>,
     onDeviceSelected: (BluetoothDevice) -> Unit,
     onBack: () -> Unit
 ) {
@@ -81,8 +82,8 @@ fun DeviceListScreen(
                 items(pairedDevices) { device ->
                     DeviceCard(
                         device = device,
-                        isConnected = currentState.isConnected &&
-                                currentState.deviceAddress == device.address,
+                        isConnected = device.address in connectedAdapters ||
+                                (currentState.isConnected && currentState.deviceAddress == device.address),
                         onClick = { onDeviceSelected(device) }
                     )
                 }
@@ -137,9 +138,19 @@ private fun DeviceCard(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    deviceModel?.name ?: device.address,
+                    deviceModel?.name ?: "Unknown device model",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    if (isConnected) "Connected" else "Not connected",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isConnected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
 
@@ -152,7 +163,7 @@ private fun DeviceCard(
             } else {
                 Icon(
                     Icons.Default.ChevronRight,
-                    contentDescription = null,
+                    contentDescription = "Not connected",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

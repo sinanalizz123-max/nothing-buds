@@ -282,17 +282,9 @@ class BudsService : Service() {
             }
         }
 
-        // Fallback: check bonded devices that might be connected
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = bluetoothManager.adapter ?: return
-
-        adapter.bondedDevices?.forEach { device ->
-            if (isNothingDevice(device) && !BudsRepository.state.value.isConnected) {
-                Log.d(TAG, "Found bonded Nothing/CMF device: ${device.name}, trying to connect...")
-                connect(device.address)
-                return
-            }
-        }
+        // A2DP is the authoritative "actually connected right now" signal. There is deliberately no
+        // bonded-device fallback here: a still-paired but long-sold pair of earbuds within range
+        // would otherwise be auto-connected, which only confuses the device picker.
     }
 
     private fun onDeviceConnected(device: BluetoothDevice) {
@@ -1183,6 +1175,16 @@ class BudsService : Service() {
                 case = prefs.getInt("last_battery_case", -1)
             )
         )
+    }
+
+    fun getConnectedDevices(): Set<String> {
+        if (!hasBluetoothPermission()) return emptySet()
+
+        return a2dpProfile?.connectedDevices
+            ?.filter { isNothingDevice(it) }
+            ?.map { it.address }
+            ?.toSet()
+            ?: emptySet()
     }
 
     fun getPairedDevices(): List<BluetoothDevice> {
