@@ -1,0 +1,114 @@
+name: Dig protocol layer (temp)
+
+# TEMPORARY dig (delete after use). Re-decompiles the 8 dex files under re/ with
+# jadx on a cloud runner and pulls the protocol layer that the Smart Dial deep
+# dive still needs:
+#   - EspeonSppProtocol / EspeonProtocol bodies (setGestureData route)
+#   - TWSDevice / TWSDeviceBuilder internals (syncSet/sendCommandsMessage framing,
+#     seq, checksum, encryption, transport)
+#   - DataExtKt.toMultiValues / toInt (read-back signedness for op 255)
+#   - keyConfiguration(/BaseSppProtocol/DeviceProtocol full context
+# It uploads every matched Java file as an artifact for reading.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dig:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Unpack dex files
+        run: |
+          mkdir -p /tmp/source
+          cd /tmp/source
+          unzip -o "$GITHUB_WORKSPACE/re/nothing-x-dex.zip"
+
+      - name: Download jadx
+        run: |
+          curl -sL -o /tmp/jadx.zip \
+            https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
+          unzip -q /tmp/jadx.zip -d /tmp/jadx
+
+      - name: Decompile dex to Java source
+        run: |
+          /tmp/jadx/bin/jadx -d /tmp/jadx-out \
+            --no-res --escape-unicode --show-bad-code --threads-count 4 \
+            /tmp/source/classes*.dex 2>&1 | tail -5
+          COUNT=$(find /tmp/jadx-out -name '*.java' | wc -l)
+          echo "jadx produced $COUNT java files"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::decompile produced no output"
+            exit 1
+          fi
+
+      - name: Collect protocol-layer files
+        run: |
+          SRC=/tmp/jadx-out/sources
+          OUT=/tmp/artifacts
+          mkdir -p "$OUT"
+          # 1) everything under the protocol packages plus named transport/data classes
+          find "$SRC" -type f -name '*.java' \( \
+            -path '*/com/nothing/protocol/*' -o \
+            -path '*/com/nothing/base/protocol/*' -o \
+            -name 'TWS*.java' -o \
+            -name '*Spp*.java' -o \
+            -name 'DataExt*.java' -o \
+            -name 'Espeon*Protocol*.java' -o \
+            -name 'BaseSppProtocol*.java' -o \
+            -name 'DeviceProtocol*.java' -o \
+            -name 'Message.java' -o \
+            -name 'ITWSParse.java' \
+          \) | sort > "$OUT/proto-files.txt.by-name"
+          # 2) content matches for the exact symbols (callers + bodies)
+          grep -rlE 'EspeonSppProtocol|EspeonProtocol|syncSet|sendCommands|toMultiValues|keyConfiguration|obtainDataPacket|getSyncResponse|setSync\$default|setSync\(' \
+            "$SRC" --include='*.java' | sort > "$OUT/proto-files.txt.by-content"
+          cat "$OUT/proto-files.txt.by-name" "$OUT/proto-files.txt.by-content" \
+            | sort -u > "$OUT/proto-files.txt"
+          echo "proto-matched: $(wc -l < "$OUT/proto-files.txt")"
+          while read -r f; do
+            rel="${f#$SRC/}"
+            mkdir -p "$OUT/proto-src/$(dirname "$rel")"
+            cp "$f" "$OUT/proto-src/$rel"
+          done < "$OUT/proto-files.txt"
+
+      - name: Print protocol findings
+        run: |
+          SRC=/tmp/jadx-out/sources
+          echo "########## ESPEON SPP PROTOCOL ##########"
+          find "$SRC" -name 'EspeonSppProtocol*.java' -o -name 'EspeonProtocol*.java' | sort
+          rg -n "setGestureData|resetGestureData|getGestureData|extends |class EspeonProtocol|class EspeonSppProtocol" \
+            "$SRC/com/nothing/espeon" --glob '*.java' 2>/dev/null | head -220 || true
+          echo
+          echo "########## TWS DEVICE / BUILDER ##########"
+          rg -n "syncSet|sendCommands|sendMessage\b|Message\.Builder|opCode|subOpCode|seq|sequence|checkSum|CRC|xor|encrypt|aes|obfuscate|START|0x7E|0xFE" \
+            "$SRC/com/nothing/protocol" --glob '*.java' | head -280 || true
+          echo
+          echo "########## DataExtKt ##########"
+          find "$SRC" -name 'DataExt*.java'
+          rg -n "toMultiValues|toInt|byteArrToInt|fromInt|fun " "$SRC" --glob 'DataExt*.java' | head -160 || true
+          echo
+          echo "########## keyConfiguration / smart dial commands ##########"
+          rg -n "keyConfiguration|SET_KEY_CONFIGURATION|GET_KEY_CONFIGURATION|61443|49176|0xF003|0xC018" \
+            "$SRC" --glob '*.java' | head -80 || true
+
+      - name: Package matched source
+        run: |
+          cd /tmp/artifacts
+          tar czf dig-proto.tar.gz proto-src proto-files.txt 2>/dev/null
+          echo "archive: $(du -h dig-proto.tar.gz | cut -f1)"
+
+      - name: Upload matched source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: dig-proto
+          path: /tmp/artifacts/dig-proto.tar.gz
+          retention-days: 14
