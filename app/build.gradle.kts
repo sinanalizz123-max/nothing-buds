@@ -24,15 +24,27 @@ android {
 
   signingConfigs {
     create("debugConfig") {
+      // Sign debug builds with a stable key so installed updates keep working. The keystore
+      // never lives in the repo: prefer a local file, else the base64 injected by CI as a
+      // GitHub secret (ANDROID_DEBUG_KEYSTORE_BASE64), else AGP's default debug keystore.
       val keystoreFile = file("${rootDir}/debug.keystore")
-      if (!keystoreFile.exists()) {
-        val base64File = file("${rootDir}/debug.keystore.base64")
-        if (base64File.exists()) {
-          val decoded = Base64.getDecoder().decode(base64File.readText().trim())
-          keystoreFile.writeBytes(decoded)
+      val envBase64 = System.getenv("ANDROID_DEBUG_KEYSTORE_BASE64")
+      when {
+        keystoreFile.exists() -> {
+          storeFile = keystoreFile
+        }
+        envBase64 != null && envBase64.isNotBlank() -> {
+          keystoreFile.writeBytes(Base64.getDecoder().decode(envBase64.trim()))
+          storeFile = keystoreFile
+        }
+        else -> {
+          // No committed key: fall back to the well-known per-developer debug keystore
+          // (~/.android/debug.keystore, auto-created by AGP).
+          storeFile = file(
+            "${System.getProperty("user.home")}/.android/debug.keystore"
+          )
         }
       }
-      storeFile = keystoreFile
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"

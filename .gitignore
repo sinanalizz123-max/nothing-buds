@@ -5,6 +5,6 @@ app/build/
 local.properties
 *.apk
 debug.keystore
-!debug.keystore.base64
+debug.keystore.base64
 .DS_Store
 log/
