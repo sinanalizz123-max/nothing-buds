@@ -128,6 +128,7 @@ data class DeviceModel(
     val hasDetailEnhancement: Boolean = false,
     val hasBassEnhancer: Boolean = false,     // "Ultra bass" via 0xC053/0xF057 — B172 only
     val hasCaseLed: Boolean = false,         // box LED colour — Ear (1) only
+    val hasSmartDial: Boolean = false,       // case rotary dial (supportSmartDial) — B172 only
     val hasEarTipFitTest: Boolean = false,
     val hasAutoPowerOff: Boolean = true,
 )
@@ -192,6 +193,7 @@ object DeviceModels {
         hasDetailEnhancement = true,
         hasBassEnhancer = true,
         hasEarTipFitTest = true,
+        hasSmartDial = true,
     )
 
     val CMF_BUDS_PRO = DeviceModel(

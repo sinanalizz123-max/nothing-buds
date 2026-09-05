@@ -333,11 +333,15 @@ val GESTURE_ACTIONS = listOf(
     GestureAction(9, "Skip forward"),
     GestureAction(10, "Noise control"),
     GestureAction(11, "Voice assistant"),
+    GestureAction(17, "Game mode"),
     GestureAction(18, "Volume up"),
     GestureAction(19, "Volume down"),
     GestureAction(20, "Noise control · NC"),
     GestureAction(21, "Noise control · Transparency"),
     GestureAction(22, "Noise control · Transparency + NC"),
+    GestureAction(23, "Volume control"),
+    GestureAction(25, "Answer call + mute"),
+    GestureAction(26, "Decline call"),
 )
 
 private fun actionLabel(id: Int): String =

@@ -41,19 +41,63 @@ import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.PacketBuilder
 
-/** The gesture triggers a slot can be assigned to, using the wire type ids. */
-private val SLOTS = listOf(
-    2 to "Double tap",
-    3 to "Triple tap",
+/**
+ * Earbud trigger slots per model (wire type id → label), per `IOTEar*GestureAction`.
+ * Espeon (B172) carries the verified set: 0 slide, 2/3 taps, 7 tap-hold, 9 double tap-hold,
+ * 15 double-press-hold. Other models keep the common base.
+ */
+private fun earbudSlots(modelId: String?): List<Pair<Int, String>> = when (modelId) {
+    "B172" -> listOf(
+        0 to "Volume slide",
+        2 to "Double tap",
+        3 to "Triple tap",
+        7 to "Tap & hold",
+        9 to "Double tap & hold",
+        15 to "Double press & hold",
+    )
+    else -> listOf(
+        2 to "Double tap",
+        3 to "Triple tap",
+        7 to "Tap & hold",
+        9 to "Double tap & hold",
+    )
+}
+
+/**
+ * Charging-case trigger slots for smart-dial models (Espeon/Heracross `caseGestures`):
+ * 1 single, 2 double, 3 triple, 7 press-hold, 10 rotate, 15 double-press-hold.
+ */
+private val CASE_SLOTS = listOf(
+    1 to "Single press",
+    2 to "Double press",
+    3 to "Triple press",
     7 to "Press & hold",
-    9 to "Double press & hold",
+    10 to "Rotate smart dial",
+    15 to "Double press & hold",
 )
 
-/** The charging case has its own trigger: the smart-dial rotation / case button. */
-private val CASE_SLOTS = listOf(
-    10 to "Rotate smart dial",
-    1 to "Case button",
-)
+/**
+ * Allowed action ids per (side, trigger), from the espeon `ControlItemViewModel` lists.
+ * Other models keep the full [GESTURE_ACTIONS] union. "No action" (1) is always offered.
+ */
+private fun allowedActionIds(side: Int, type: Int, modelId: String?): List<Int> {
+    if (modelId != "B172") return GESTURE_ACTIONS.map { it.id }
+    if (side == PacketBuilder.SIDE_CASE) {
+        return when (type) {
+            1 -> listOf(9, 8, 2, 11, 17, 1)   // single press
+            7 -> listOf(22, 11, 17, 1)         // press & hold
+            2 -> listOf(3, 25, 1)              // double press (call)
+            3 -> listOf(26, 1)                 // triple press (call)
+            10 -> listOf(23, 1)                // rotate → volume control
+            else -> listOf(1)
+        }
+    }
+    return when (type) {
+        0 -> listOf(18, 19, 11, 1)  // volume slide
+        7 -> listOf(18, 19, 11, 1)  // press & hold → volume + assistant
+        else -> listOf(9, 8, 11, 1) // double/triple/double-tap-hold
+    }
+}
 
 /**
  * Per-side gesture customization. Each trigger slot on the left/right earbud and the charging case
@@ -87,9 +131,9 @@ fun GestureScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SideCard("Left earbud", PacketBuilder.SIDE_LEFT, SLOTS, state, onSetGesture)
-            SideCard("Right earbud", PacketBuilder.SIDE_RIGHT, SLOTS, state, onSetGesture)
-            if (state.deviceModel?.hasGestureControl != false) {
+            SideCard("Left earbud", PacketBuilder.SIDE_LEFT, earbudSlots(state.deviceModel?.id), state, onSetGesture)
+            SideCard("Right earbud", PacketBuilder.SIDE_RIGHT, earbudSlots(state.deviceModel?.id), state, onSetGesture)
+            if (state.deviceModel?.hasSmartDial == true) {
                 CaseCard(state, onSetGesture)
             }
             Spacer(Modifier.height(32.dp))
@@ -142,10 +186,11 @@ private fun GestureSlotRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
+    val allowed = GESTURE_ACTIONS.filter { it.id in allowedActionIds(side, type, state.deviceModel?.id) }
     val current = state.gestures
         .find { it.side == side && it.type == type }
         ?.let { GESTURE_ACTIONS.find { action -> action.id == it.action } }
-        ?: GESTURE_ACTIONS.first()
+        ?: allowed.find { it.id == 1 } ?: allowed.first()
 
     Row(
         modifier = Modifier
@@ -171,7 +216,7 @@ private fun GestureSlotRow(
 
         Box {
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                GESTURE_ACTIONS.forEach { action ->
+                allowed.forEach { action ->
                     DropdownMenuItem(
                         text = { Text(action.label) },
                         onClick = {
