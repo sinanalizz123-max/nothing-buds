@@ -911,6 +911,13 @@ class BudsService : Service() {
                 sendCommand(PacketBuilder.readDiracEq())
             }
 
+            Commands.ACK_SET_GESTURES -> {
+                Log.d(TAG, "SET_GESTURES ack")
+                // The case reboots to apply writes and can drop a slot; re-read so the UI never
+                // shows a configuration the earbuds did not keep.
+                sendCommand(PacketBuilder.readGestures())
+            }
+
             Commands.RESPONSE_LHDC -> {
                 val lhdc = ResponseParser.parseLhdc(response.payload)
                 Log.d(TAG, "LHDC: $lhdc")
@@ -1289,7 +1296,7 @@ class BudsService : Service() {
             putInt("last_battery_case", state.battery.case)
             apply()
         }
-        Log.d(TAG, "State saved: ANC=${state.ancMode}, EQ=${state.eqPreset}")
+        Log.d(TAG, "State saved: ANC=${state.ancMode}, EQ=${state.eqPreset}, Dirac=${state.diracEq}")
     }
 
     /**

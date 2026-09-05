@@ -277,8 +277,9 @@ object ResponseParser {
     /**
      * One gesture slot read back from the key-configuration report.
      *
-     * The wire layout per slot is `[device, common, type, action]`: device 2 = left / 3 = right,
-     * type is the trigger (double tap, triple tap, press-and-hold, …) and action the operation.
+     * The wire layout per slot is `[device, common, type, action]`: device 2 = left / 3 = right /
+     * 4 = case (same byte the write uses), type is the trigger (double tap, triple tap,
+     * press-and-hold, …) and action the operation.
      */
     data class GestureSlot(
         val side: Int,

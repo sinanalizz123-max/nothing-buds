@@ -122,6 +122,8 @@ object Commands {
     val ACK_SET_DUAL: Int = responseOf(SET_DUAL)
     val ACK_SET_CONNECT_DEVICE: Int = responseOf(SET_CONNECT_DEVICE)
     val ACK_SET_DIRAC_EQ: Int = responseOf(SET_DIRAC_EQ)
+    /** 0x7003 — the empty payload the earbuds return after a 0xF003 key-configuration write. */
+    val ACK_SET_GESTURES: Int = responseOf(SET_GESTURES)
 }
 
 /**

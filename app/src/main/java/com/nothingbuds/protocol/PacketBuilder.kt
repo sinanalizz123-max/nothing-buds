@@ -163,12 +163,12 @@ object PacketBuilder {
         build(Commands.SET_PERSONALIZED_ANC, byteArrayOf(level.toByte()))
 
     /**
-     * Gesture slot write, one slot per packet.
-     *
-     * [side] is 2 for left and 3 for right (see [SIDE_LEFT]/[SIDE_RIGHT]), [gestureType] is the
-     * trigger (2 double tap, 3 triple tap, 7 press-and-hold, 9 double-press-and-hold) and
-     * [action] is the operation id (8 skip back, 9 skip forward, 11 voice assistant, 18/19
-     * volume up/down, 10/20/21/22 noise control variants, 1 no action, …).
+     * Gesture slot write, one slot per packet. Payload `[count, device, button, gesture, action]`
+     * matches `ControlConfigurationEntity.obtainDataPacket()`: the slot count then each
+     * `Operation(device, button, gesture, operation)`. [side] is 2 left / 3 right / 4 case,
+     * [gestureType] the trigger (2 double tap, 3 triple tap, 7 press-and-hold, 9 double-tap-hold,
+     * 10 rotate, 15 double-press-hold) and [action] the operation id (8 skip back, 9 skip forward,
+     * 11 voice assistant, 18/19 volume up/down, 10/20/21/22 noise control variants, 1 no action, …).
      */
     fun setGesture(side: Int, gestureType: Int, action: Int): ByteArray =
         build(
@@ -287,11 +287,12 @@ object PacketBuilder {
     const val SIDE_RIGHT = 0x03
     const val SIDE_BOTH = 0x06
     /**
-     * The charging case acts as its own gesture side in the key-configuration report. The device
-     * id for the case is not in the offline RE docs, so this is experimental: a wrong id simply
-     * gets ignored by the firmware and the next read reconciles it.
+     * The charging case acts as its own gesture device in the key-configuration report. Each slot
+     * is `[device, button, gesture, operation]` (ControlConfigurationEntity.Operation); the device
+     * byte is 2 left / 3 right / 4 case (CONFIRMED from espeon `ControlItemViewModel.convertOptions()`
+     * and the case-lock row `Operation(4, 1, 15, 40)`).
      */
-    const val SIDE_CASE = 0x01
+    const val SIDE_CASE = 0x04
     /** Single-earpiece products (headphones) use this, and then the side byte is left out. */
     const val SIDE_SINGLE = 0x05
     /** The official app offers five steps; the firmware itself echoes anything it is given. */
