@@ -309,19 +309,20 @@ object ResponseParser {
     }
 
     /**
-     * Case LED report: `[count, ?, (R, G, B)...]`. The first byte after the count does not map to
-     * a documented field, so it is skipped and each LED is read as a 3-byte RGB triple.
+     * Case LED report, matching the official DeviceBoxLed layout:
+     * `[count, (type, R, G, B) x count]`. The first byte is the count, then each slot is a 4-byte
+     * group of (slot type, red, green, blue).
      */
     fun parseCaseLed(payload: ByteArray): List<Int> {
         if (payload.size < 2) return emptyList()
         val count = payload[0].toInt() and 0xFF
         val result = ArrayList<Int>(count)
         for (i in 0 until count) {
-            val offset = 2 + i * 3
-            if (offset + 2 >= payload.size) break
-            val r = payload[offset].toInt() and 0xFF
-            val g = payload[offset + 1].toInt() and 0xFF
-            val b = payload[offset + 2].toInt() and 0xFF
+            val offset = 1 + i * 4
+            if (offset + 3 >= payload.size) break
+            val r = payload[offset + 1].toInt() and 0xFF
+            val g = payload[offset + 2].toInt() and 0xFF
+            val b = payload[offset + 3].toInt() and 0xFF
             result.add(0xFF000000.toInt() or (r shl 16) or (g shl 8) or b)
         }
         return result
