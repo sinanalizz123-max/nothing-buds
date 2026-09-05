@@ -196,14 +196,87 @@ Changes:
 - No code changes for Task 5. All profiles were already verified against source during Task 1
   and Task 2. The verification table above documents the audit.
 
+Task 6 — Gesture write dispatch
+STATUS: DONE
+Evidence:
+
+Complete path verified from UI to wire:
+
+1. UI selection (app/src/main/java/com/nothingbuds/ui/screens/GestureScreen.kt:200):
+     onSetGesture(side, slot.type, action.id)
+   - `side` is PacketBuilder.SIDE_LEFT (0x02) or SIDE_RIGHT (0x03) for ear rows, SIDE_CASE (0x04)
+     for case rows. Passed through from SideCard / CaseCard / GestureSlotRow.
+   - `slot.type` is the wire gesture type (2 double tap, 3 triple tap, 7 press-and-hold, …).
+   - `action.id` is the operation id from GESTURE_ACTIONS, filtered to profile.operationsFor()
+     so only model-supported operations can be picked.
+
+2. MainActivity wiring (app/src/main/java/com/nothingbuds/ui/MainActivity.kt:180-182):
+     onSetGesture = { side, type, action -> budsService?.setGesture(side, type, action) }
+
+3. Service (app/src/main/java/com/nothingbuds/service/BudsService.kt:1073-1085):
+     fun setGesture(side: Int, type: Int, action: Int) {
+         if (side == PacketBuilder.SIDE_CASE) {
+             sendChangeWithTone { PacketBuilder.setGesture(side, type, action) }
+         } else {
+             sendCommand(PacketBuilder.setGesture(side, type, action))
+         }
+         updateState { state -> ... }   // optimistic UI update
+     }
+   - Case writes play a reboot tone first (the case reboots to apply case-side changes).
+   - Ear writes go through the normal command channel.
+   - State is updated optimistically; the next poll/ACK reconciles with what the device kept.
+
+4. Packet builder (app/src/main/java/com/nothingbuds/protocol/PacketBuilder.kt:173-177):
+     fun setGesture(side: Int, gestureType: Int, action: Int): ByteArray =
+         build(
+             Commands.SET_GESTURES,
+             byteArrayOf(0x01, side.toByte(), 0x01, gestureType.toByte(), action.toByte())
+         )
+   - Command id: Commands.SET_GESTURES = 0xF003.
+   - Payload: [count=1, device=side, common=1, gesture=gestureType, action=action].
+   - The 0x01 "common" byte matches the GET_KEY_CONFIGURATION response layout
+     `[count, (device, common, type, action)...]` (ResponseParser.parseGestures at line 294
+     reads device at offset+0, skips common at offset+1, type at offset+2, action at offset+3).
+
+5. ACK handling (app/src/main/java/com/nothingbuds/service/BudsService.kt:914-919):
+     Commands.ACK_SET_GESTURES -> {
+         Log.d(TAG, "SET_GESTURES ack")
+         sendCommand(PacketBuilder.readGestures())
+     }
+   - ACK id: Commands.ACK_SET_GESTURES = 0x7003 (responseOf(SET_GESTURES)).
+   - On ACK, the service re-reads the gesture configuration so the UI never shows a value the
+     earbuds did not keep (important for case writes that reboot).
+
+Device IDs (PacketBuilder.kt:286-295):
+   SIDE_LEFT  = 0x02  (matches espeon `ControlItemViewModel.convertOptions` line 217)
+   SIDE_RIGHT = 0x03  (matches line 221)
+   SIDE_CASE  = 0x04  (matches line 225: `else if (device == 4) { isCase().set(true); }`)
+
+Packet length:
+- The current build() writes 1 byte for payload length + 1 reserved byte. For gesture writes
+  (5-byte payload) this is fine. There is a latent 16-bit length issue for payloads > 255 bytes
+  (the length would truncate to the low byte). This is NOT a Task 6 issue — gesture payloads
+  are always <= 5 bytes. The 16-bit length fix is tracked separately (was point 12 of the
+  original spec; not in scope for this gesture-capabilities branch).
+
+UI capability restrictions:
+- GestureSlotRow builds the dropdown from `GESTURE_ACTIONS.filter { it.id in allowedIds }`
+  where `allowedIds = profile.operationsFor(side, slot.type)`. The user cannot pick an
+  operation the model does not support.
+- The service layer does not re-validate the action against the profile; the UI is the single
+  source of truth for what the user can send. This is acceptable because the UI is the only
+  caller of setGesture() in the current code.
+
+Changes:
+- No code changes. The dispatch path was already correct from the B172-only implementation in
+  commit 9e6e925; the per-model capability tables added in this branch are consumed by the UI
+  and do not change the wire format.
+
 Verification:
-- Every model's SUPPORT_GESTURES, SUPPORT_*_OPERATIONS arrays, and setDefaultOperation() calls
-  were re-read from the decompiled source files listed in the table.
-- Cross-checked: Hoothoot B185 has no own control-src; it reuses Donphan (its only decompiled
-  file is IOTProductDeviceHoothoot.java which sets PRODUCT_ID = "B185" but delegates to the
-  Donphan gesture protocol).
-- Heracross B187 reuses Espeon via EspeonImpl (proven by IOTProductDeviceHeracross.java:143).
-- Gligar B184 has the same ControlItemViewModel structure as Girafarig B179 with identical
-  SUPPORT arrays.
+- Traced every call from GestureScreen.GestureSlotRow → MainActivity → BudsService.setGesture
+  → PacketBuilder.setGesture → wire bytes, and the reverse path from ACK → readGestures →
+  parseGestures → state.gestures → UI.
+- Confirmed device ids match the espeon source.
+- Confirmed the payload layout matches the GET_KEY_CONFIGURATION response layout.
 
 Confidence: 100%.
