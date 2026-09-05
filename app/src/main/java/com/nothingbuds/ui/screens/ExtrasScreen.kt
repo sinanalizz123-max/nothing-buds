@@ -266,7 +266,9 @@ fun ExtrasScreen(
                 }
             }
 
-            if (model == null || model.hasCaseLed) {
+            // Box LED is advertised only on the Nothing Ear (1) — newer cases (CMF Buds Pro 2)
+            // carry a physical rotary/mode dial instead, so never offer it for unknown models.
+            if (model?.hasCaseLed == true) {
                 SectionCard("Case LED", Icons.Default.Lightbulb) {
                     Text(
                         "Box LED colour",
