@@ -50,65 +50,52 @@ jobs:
             exit 1
           fi
 
-      - name: Collect protocol-layer files
+      - name: Collect Utils / XConnector files
         run: |
           SRC=/tmp/jadx-out/sources
           OUT=/tmp/artifacts
           mkdir -p "$OUT"
-          # 1) everything under the protocol packages plus named transport/data classes
           find "$SRC" -type f -name '*.java' \( \
-            -path '*/com/nothing/protocol/*' -o \
-            -path '*/com/nothing/base/protocol/*' -o \
-            -name 'TWS*.java' -o \
-            -name '*Spp*.java' -o \
-            -name 'DataExt*.java' -o \
-            -name 'Espeon*Protocol*.java' -o \
-            -name 'BaseSppProtocol*.java' -o \
-            -name 'DeviceProtocol*.java' -o \
-            -name 'Message.java' -o \
-            -name 'ITWSParse.java' \
-          \) | sort > "$OUT/proto-files.txt.by-name"
-          # 2) content matches for the exact symbols (callers + bodies)
-          grep -rlE 'EspeonSppProtocol|EspeonProtocol|syncSet|sendCommands|toMultiValues|keyConfiguration|obtainDataPacket|getSyncResponse|setSync\$default|setSync\(' \
-            "$SRC" --include='*.java' | sort > "$OUT/proto-files.txt.by-content"
-          cat "$OUT/proto-files.txt.by-name" "$OUT/proto-files.txt.by-content" \
-            | sort -u > "$OUT/proto-files.txt"
-          echo "proto-matched: $(wc -l < "$OUT/proto-files.txt")"
+            -path '*/com/nothing/base/util/*' -o \
+            -path '*/com/nothing/link/bluetooth/sdk/*' -o \
+            -name 'Utils.java' -o \
+            -name 'XConnector.java' -o \
+            -name 'XDefaultParser.java' -o \
+            -name 'XCommand.java' -o \
+            -name 'XWriteCallback.java' -o \
+            -name 'XBluetoothManager.java' \
+          \) | sort > "$OUT/proto2-files.txt.by-name"
+          grep -rlE 'obtainCrc16|writeWithTask|class XDefaultParser|parseRawData|XCommand' \
+            "$SRC" --include='*.java' | sort > "$OUT/proto2-files.txt.by-content"
+          cat "$OUT/proto2-files.txt.by-name" "$OUT/proto2-files.txt.by-content" \
+            | sort -u > "$OUT/proto2-files.txt"
+          echo "proto2-matched: $(wc -l < "$OUT/proto2-files.txt")"
           while read -r f; do
             rel="${f#$SRC/}"
-            mkdir -p "$OUT/proto-src/$(dirname "$rel")"
-            cp "$f" "$OUT/proto-src/$rel"
-          done < "$OUT/proto-files.txt"
+            mkdir -p "$OUT/proto2-src/$(dirname "$rel")"
+            cp "$f" "$OUT/proto2-src/$rel"
+          done < "$OUT/proto2-files.txt"
 
-      - name: Print protocol findings
+      - name: Print Utils / XConnector findings
         run: |
           SRC=/tmp/jadx-out/sources
-          echo "########## ESPEON SPP PROTOCOL ##########"
-          find "$SRC" -name 'EspeonSppProtocol*.java' -o -name 'EspeonProtocol*.java' | sort
-          rg -n "setGestureData|resetGestureData|getGestureData|extends |class EspeonProtocol|class EspeonSppProtocol" \
-            "$SRC/com/nothing/espeon" --glob '*.java' 2>/dev/null | head -220 || true
+          echo "########## Utils.obtainCrc16 ##########"
+          rg -n "obtainCrc16|CRC|0x1021|0x8005|0xA001|poly|table" \
+            "$SRC/com/nothing/base/util" --glob 'Utils*.java' 2>/dev/null | head -120 || true
           echo
-          echo "########## TWS DEVICE / BUILDER ##########"
-          rg -n "syncSet|sendCommands|sendMessage\b|Message\.Builder|opCode|subOpCode|seq|sequence|checkSum|CRC|xor|encrypt|aes|obfuscate|START|0x7E|0xFE" \
-            "$SRC/com/nothing/protocol" --glob '*.java' | head -280 || true
-          echo
-          echo "########## DataExtKt ##########"
-          find "$SRC" -name 'DataExt*.java'
-          rg -n "toMultiValues|toInt|byteArrToInt|fromInt|fun " "$SRC" --glob 'DataExt*.java' | head -160 || true
-          echo
-          echo "########## keyConfiguration / smart dial commands ##########"
-          rg -n "keyConfiguration|SET_KEY_CONFIGURATION|GET_KEY_CONFIGURATION|61443|49176|0xF003|0xC018" \
-            "$SRC" --glob '*.java' | head -80 || true
+          echo "########## XConnector.writeWithTask ##########"
+          rg -n "writeWithTask|parseRawData|XDefaultParser|splitPacket|adapter|rawData|onParse|calcu|checksum" \
+            "$SRC/com/nothing/link" --glob '*.java' 2>/dev/null | head -220 || true
 
       - name: Package matched source
         run: |
           cd /tmp/artifacts
-          tar czf dig-proto.tar.gz proto-src proto-files.txt 2>/dev/null
-          echo "archive: $(du -h dig-proto.tar.gz | cut -f1)"
+          tar czf dig-proto2.tar.gz proto2-src proto2-files.txt 2>/dev/null
+          echo "archive: $(du -h dig-proto2.tar.gz | cut -f1)"
 
       - name: Upload matched source bundle
         uses: actions/upload-artifact@v4
         with:
-          name: dig-proto
-          path: /tmp/artifacts/dig-proto.tar.gz
+          name: dig-proto2
+          path: /tmp/artifacts/dig-proto2.tar.gz
           retention-days: 14
