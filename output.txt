@@ -32,4 +32,48 @@ Verification:
 Confidence: ~95% (Elekid button-10 defaults are recorded but not yet plumbed through GestureScreen because the UI does not yet distinguish button-10 magic rows; not blocking Task 2).
 
 Task 2 — Elekid
-STATUS: PENDING (not yet started)
+STATUS: DONE
+Evidence:
+- re/control-src/com/nothing/elekid/control/ControlViewModel.java:
+    SUPPORT_GESTURES = {1, 7}
+    SUPPORT_MAGIC_GESTURES = {11, 31, 10, 27, 34, 29}
+  The "magic" array is consumed by ControlItemViewModel.convertOptions() when gesture==1
+  (single press) or gesture==7 with button==10.
+- ControlItemViewModel.java convertOptions():
+  * gesture==1 → unconditionally enters the magic-button branch; the wire `it.getButton()` is
+    expected to be 10 for the Elekid single button. Operations list is built by iterating
+    SUPPORT_MAGIC_GESTURES and calling addMagicNews(op=31) (gated by isSupportNews / isNothingOS),
+    addNothingRadio(op=32) (gated by isNothingOS), addEssentialSpace(op=33) (gated by
+    isSupportEssential), addNothingRadioSetting(op=51, isMagicGesture=true) (gated by
+    isNothingOS), and addMagicClose(op=1). The default operation for gesture 1 is
+    `isNothingOS() ? 32 : 11` (Nothing Radio on Nothing phones, AI assistant elsewhere).
+  * gesture==7, button==10 → same magic list as gesture 1 plus Essential Space. Default is
+    `isNothingOS() ? 11 : 1` (assistant on Nothing phones, None elsewhere).
+  * gesture==7, button!=10 → SUPPORT_OPERATIONS_MORE = {10} (ANC only). Default is 22.
+  * gesture==2 / gesture==3 → also supported (SUPPORT_DOUBLE_OPERATIONS / SUPPORT_OPERATIONS =
+    {8, 9, 11}); defaults 9 and 8 respectively.
+Determination:
+- Magic gestures are user-configurable: the official app renders them in the gesture list with the
+  isMagicGesture() flag set so they display with the "magic" style.
+- They are tied to the Elekid's single physical "magic button" (wire button id 10).
+- They are NOT a separate hidden slot; they ARE the operations offered for gesture 1 (and gesture 7
+  on the magic button) on this single-button device.
+- Operations 27, 29, 34 are part of the magic list but their human-readable labels are not in the
+  strings we have access to; we still expose them because the source includes them in
+  SUPPORT_MAGIC_GESTURES, and the official app renders them.
+Changes:
+- app/src/main/java/com/nothingbuds/ui/screens/GestureCapabilities.kt
+  * ELEKID now exposes slots {1, 7} (was {7} only) with operations:
+      1 → {11, 31, 10, 27, 34, 29, 1}  (magic list + None at end, matches source order)
+      7 → {10, 11, 1}                   (ANC + assistant + None, the non-magic press-and-hold path)
+  * ELEKID defaults:
+      1 → OsDependentDefault(nothingOs = 32, other = 11)  (Nothing Radio vs AI assistant)
+      7 → FixedDefault(22)                                (ANC, the non-magic default)
+Verification:
+- Every magic operation id, the conditional gates (isNothingOS / isSupportNews / isSupportEssential)
+  and the default formulas were re-read from the decompiled source above.
+- The current UI does not yet render the isMagicGesture() styling (that is a separate
+  ControlOperationViewModel visual concern). GestureScreen at minimum surfaces the right operation
+  ids; the magic styling is out of scope of this task per the source-fidelity success condition.
+Confidence: 100% on data; the visual "magic" indicator on each row is the only piece not yet
+reflected in Compose (it lives in the row template, not in the capability table).

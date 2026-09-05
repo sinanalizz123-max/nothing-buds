@@ -190,18 +190,31 @@ object GestureCapabilities {
         ),
     )
 
-    // ---- Elekid (B170) — single-button control: press-and-hold only ------------------------------
-
+    // ---- Elekid (B170) — single-button device; gesture 1 fires the "magic button" action list -----
+    //
+    // Source: re/control-src/com/nothing/elekid/control/{ControlItemViewModel,ControlViewModel}.java
+    // SUPPORT_GESTURES = {1, 7}; SUPPORT_MAGIC_GESTURES = {11, 31, 10, 27, 34, 29}.
+    // Gesture 1 (single press) always goes through the magic-button path (button==10 in the wire
+    // protocol) and is conditionally augmented with:
+    //   - 31 (AI news) if isSupportNews();
+    //   - 32 (Nothing Radio) if isNothingOS();
+    //   - 33 (Essential Space) if isSupportEssential();
+    //   - 51 (Nothing Radio setting, isMagicGesture=true) if isNothingOS();
+    // plus 1 (None) appended at the end.
+    // Gesture 7 (press & hold) has two paths:
+    //   - button==10  → same magic list as gesture 1;
+    //   - button!=10  → SUPPORT_OPERATIONS_MORE = {10} (ANC only).
+    // The user-configurable rows in the normal gesture UI are gesture 1 (magic) and gesture 7
+    // (press & hold). The "magic" operations are *not* a separate hidden slot — they are the
+    // operations the official app offers for gesture 1 on the Elekid single button.
     val ELEKID = GestureProfile(
-        slots = slots(2, 3, 7),
+        slots = slots(1, 7),
         operations = mapOf(
-            2 to listOf(8, 9, 11),
-            3 to listOf(8, 9, 11),
+            1 to listOf(11, 31, 10, 27, 34, 29, 1),
             7 to listOf(10, 11, 1),
         ),
         defaults = mapOf(
-            2 to FixedDefault(9),
-            3 to FixedDefault(8),
+            1 to OsDependentDefault(nothingOs = 32, other = 11),
             7 to FixedDefault(22),
         ),
     )
