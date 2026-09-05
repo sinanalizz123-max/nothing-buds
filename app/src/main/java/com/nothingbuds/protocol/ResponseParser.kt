@@ -219,21 +219,28 @@ object ResponseParser {
         return (payload[0].toInt() and 0xFF) == 1
     }
 
-    /** Bass boost reports `[enabled, level]`. */
+    /** Bass boost / enhancer share a shape: value (0..100) and an on/off flag. */
     data class BassBoost(val enabled: Boolean, val level: Int)
 
+    /** BassBoostItem is `[value, selected]` (CONFIRMED): strength first, then the on/off flag. */
     fun parseBassBoost(payload: ByteArray): BassBoost? {
         if (payload.isEmpty()) return null
-        val enabled = (payload[0].toInt() and 0xFF) == 1
-        // The firmware echoes whatever it was given, including values the official app never
-        // sends, so anything outside the supported range is pulled back into it.
-        val level = if (payload.size > 1) {
-            (payload[1].toInt() and 0xFF).coerceIn(1, PacketBuilder.BASS_LEVEL_MAX)
-        } else {
-            1
-        }
+        val enabled = payload.size > 1 && (payload[1].toInt() and 0xFF) == 1
+        val level = parserBassLevel(payload.firstOrNull()?.toInt()?.and(0xFF) ?: 0)
         return BassBoost(enabled, level)
     }
+
+    /** EQReimburse (bass enhancer / ultra bass) is `[switch, value]` (CONFIRMED). */
+    fun parseBassEnhancer(payload: ByteArray): BassBoost? {
+        if (payload.isEmpty()) return null
+        val enabled = (payload[0].toInt() and 0xFF) == 1
+        val value = if (payload.size > 1) (payload[1].toInt() and 0xFF) else 0
+        return BassBoost(enabled, parserBassLevel(value))
+    }
+
+    /** 0..100 strength → the app's 1..5 slider scale. */
+    private fun parserBassLevel(value: Int): Int =
+        (value / 20 + if (value % 20 >= 10) 1 else 0).coerceIn(0, PacketBuilder.BASS_LEVEL_MAX)
 
     /** In-ear detection rides along in the extra-features report as `[0x01, 0x01, on]`. */
     fun parseInEarFromExtraFeatures(payload: ByteArray): Boolean? {

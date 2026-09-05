@@ -71,6 +71,8 @@ object PacketBuilder {
 
     fun readBassBoost(): ByteArray = build(Commands.READ_BASS_BOOST)
 
+    fun readBassEnhancer(): ByteArray = build(Commands.READ_BASS_ENHANCER)
+
     fun readSpatialAudio(): ByteArray = build(Commands.READ_SPATIAL_AUDIO)
 
     fun readAdvancedEqValues(): ByteArray = build(Commands.READ_ADVANCED_EQ_VALUES)
@@ -112,13 +114,30 @@ object PacketBuilder {
         build(Commands.SET_LOW_LATENCY, byteArrayOf(if (enabled) 1 else 2))
 
     /**
-     * `[enabled, level]` — bass boost carries a strength, which is what the official app exposes
-     * as a slider.
+     * Bass boost sends `[value, selected]` (BassBoostItem, CONFIRMED): a 0..100 strength followed by
+     * the on/off flag. The official app's seekbar is 0-100; the app-level UI hierarchy here is 1..5,
+     * so the level is scaled linearly before it goes on the wire.
      */
     fun setBassBoost(enabled: Boolean, level: Int): ByteArray =
         build(
             Commands.SET_BASS_BOOST,
-            byteArrayOf(if (enabled) 1 else 0, level.coerceIn(0, BASS_LEVEL_MAX).toByte())
+            byteArrayOf(
+                if (enabled) bassValueForLevel(level) else 0,
+                if (enabled) 1 else 0
+            )
+        )
+
+    /**
+     * "Ultra bass" on Espeon (CMF Buds Pro 2): `[switch, value]` (EQReimburse, CONFIRMED), with
+     * the same 0..100 strength the boost command uses.
+     */
+    fun setBassEnhancer(enabled: Boolean, level: Int): ByteArray =
+        build(
+            Commands.SET_BASS_ENHANCER,
+            byteArrayOf(
+                if (enabled) 1 else 0,
+                if (enabled) bassValueForLevel(level) else 0
+            )
         )
 
     /** `[on]`, or `[on, headTracking]` where the device supports head tracking. */
@@ -273,6 +292,10 @@ object PacketBuilder {
     const val SIDE_SINGLE = 0x05
     /** The official app offers five steps; the firmware itself echoes anything it is given. */
     const val BASS_LEVEL_MAX = 5
+
+    /** Maps the app's 1..5 slider step to the 0..100 strength the wire expects. */
+    private fun bassValueForLevel(level: Int): Byte =
+        (level.coerceIn(0, BASS_LEVEL_MAX) * 20).coerceIn(0, 100).toByte()
     /** Detail enhancement intensity steps: Low, Mid and High. */
     const val DETAIL_LEVEL_MAX = 3
     /** Dirac Opteo preset ids run 0..5 (named) with 6 reserved for custom. */

@@ -5,7 +5,9 @@ import android.app.StatusBarManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.Context
+import android.net.Uri
 import android.os.Build
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -19,15 +21,24 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.nothingbuds.R
+import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.data.CompanionPairing
 import com.nothingbuds.qs.AncTileService
 import com.nothingbuds.service.BudsService
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,11 +188,27 @@ fun SettingsScreen(
             }
 
             // About section
+            var versionTaps by rememberSaveable { mutableStateOf(0) }
+            var lastVersionTap by remember { mutableStateOf(0L) }
+            val scope = rememberCoroutineScope()
+
             SettingsSection(title = "About") {
                 SettingsItem(
                     title = "Version",
-                    subtitle = "1.0.0",
-                    icon = Icons.Default.Info
+                    subtitle = "1.0.0 (tap 7× to export logs)",
+                    icon = Icons.Default.Info,
+                    onClick = {
+                        val now = SystemClock.elapsedRealtime()
+                        versionTaps = if (now - lastVersionTap > 1500) 1 else versionTaps + 1
+                        lastVersionTap = now
+                        if (versionTaps >= 7) {
+                            versionTaps = 0
+                            scope.launch {
+                                Toast.makeText(context, "Exporting logs…", Toast.LENGTH_SHORT).show()
+                                exportLogs(context)
+                            }
+                        }
+                    }
                 )
 
                 SettingsItem(
@@ -322,5 +349,78 @@ private fun SettingsItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+/** Gathers our app's logcat, header, and last known earbuds state into a shareable file. */
+private suspend fun exportLogs(context: Context) {
+    val appTags = setOf(
+        "BudsService", "MainActivity", "NothingBudsApp", "BudsCompanionService",
+        "BootReceiver", "BluetoothConnectionReceiver", "AncTileService"
+    )
+
+    val body = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime"))
+            val logs = process.inputStream.bufferedReader().useLines { lines ->
+                lines.filter { line ->
+                    appTags.any { line.contains(" $it ") || line.contains(" $it:") } ||
+                        line.contains("nothingbuds")
+                }.joinToString("\n")
+            }
+            process.waitFor()
+            logs
+        } catch (e: Exception) {
+            "logcat unavailable: ${e.message}"
+        }
+    }
+
+    val header = buildString {
+        val version = try {
+            val pm = context.packageManager
+            pm.getPackageInfo(context.packageName, 0).versionName
+        } catch (e: Exception) {
+            "?"
+        }
+        appendLine("Nothing Buds log export")
+        appendLine("time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}")
+        appendLine("app version: $version")
+        appendLine("android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT}, ${Build.MANUFACTURER} ${Build.MODEL})")
+        val state = BudsRepository.state.value
+        appendLine("earbuds: ${state.deviceName} ${state.deviceAddress} model=${state.deviceModel?.id} connected=${state.isConnected} fw=${state.firmwareVersion}")
+        appendLine("battery: ${state.battery}")
+        appendLine("anc=${state.ancMode}, eq=${state.eqPreset}, dirac=${state.diracEq}, customEq=${state.customEq.joinToString(",")}")
+        appendLine("bass=${state.enhancedBass}/level=${state.bassLevel}, spatial=${state.spatialAudio}, lhdc=${state.lhdc}, dual=${state.dualDevice}")
+        appendLine("lowLatency=${state.lowLatencyMode}, inEar=${state.inEarDetection}, powerOff=${state.autoPowerOffMinutes}min")
+        appendLine("prefs: ${context.getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE).all}")
+        appendLine()
+        appendLine("--- logcat ---")
+        appendLine(body)
+    }
+
+    val dir = File(context.getExternalFilesDir(null), "logs").apply { mkdirs() }
+    val file = File(dir, "nothingbuds_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.log")
+    val written = runCatching { file.writeText(header) }.isSuccess
+
+    val uri = runCatching {
+        FileProvider.getUriForFile(context, "com.nothingbuds.fileprovider", file)
+    }.getOrNull()
+
+    if (!written || uri == null) {
+        Toast.makeText(context, "Failed to export logs", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    val share = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_SUBJECT, "Nothing Buds logs")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching {
+        context.startActivity(Intent.createChooser(share, "Share Nothing Buds logs"))
+    }.onFailure {
+        Toast.makeText(context, "Export failed: ${it.message}", Toast.LENGTH_LONG).show()
     }
 }

@@ -39,6 +39,7 @@ object Commands {
     const val READ_LOW_LATENCY: Int = 0xC041
     const val READ_FIRMWARE: Int = 0xC042
     const val READ_BASS_BOOST: Int = 0xC04E
+    const val READ_BASS_ENHANCER: Int = 0xC053   // "Ultra bass", Espeon (B172)
     const val READ_SPATIAL_AUDIO: Int = 0xC04F
     const val READ_SMART_FREE: Int = 0xC054
     const val READ_SMART_ANC: Int = 0xC055
@@ -66,6 +67,7 @@ object Commands {
     const val SET_DIRAC_EQ: Int = 0xF01D             // Dirac Opteo preset/custom
     const val SET_LOW_LATENCY: Int = 0xF040
     const val SET_BASS_BOOST: Int = 0xF051
+    const val SET_BASS_ENHANCER: Int = 0xF057
     const val SET_SPATIAL_AUDIO: Int = 0xF052
     const val SET_SMART_FREE: Int = 0xF058
     const val SET_SMART_ANC: Int = 0xF059
@@ -94,6 +96,7 @@ object Commands {
     val RESPONSE_EXTRA_FEATURES: Int = responseOf(READ_EXTRA_FEATURES)
     val RESPONSE_LOW_LATENCY: Int = responseOf(READ_LOW_LATENCY)
     val RESPONSE_BASS_BOOST: Int = responseOf(READ_BASS_BOOST)
+    val RESPONSE_BASS_ENHANCER: Int = responseOf(READ_BASS_ENHANCER)
     val RESPONSE_SPATIAL_AUDIO: Int = responseOf(READ_SPATIAL_AUDIO)
     val RESPONSE_ADVANCED_EQ_VALUES: Int = responseOf(READ_ADVANCED_EQ_VALUES)
     val RESPONSE_CONFIGURATION: Int = responseOf(READ_CONFIGURATION)
@@ -112,6 +115,7 @@ object Commands {
     val ACK_SET_ANC: Int = responseOf(SET_ANC)
     val ACK_SET_EQ: Int = responseOf(SET_EQ)
     val ACK_SET_BASS_BOOST: Int = responseOf(SET_BASS_BOOST)
+    val ACK_SET_BASS_ENHANCER: Int = responseOf(SET_BASS_ENHANCER)
     val ACK_SET_LOW_LATENCY: Int = responseOf(SET_LOW_LATENCY)
     val ACK_SET_EXTRA_FEATURES: Int = responseOf(SET_EXTRA_FEATURES)
     val ACK_SET_SPATIAL_AUDIO: Int = responseOf(SET_SPATIAL_AUDIO)
@@ -157,14 +161,16 @@ enum class AncMode(val value: Byte) {
 }
 
 /**
- * EQ presets for [Commands.SET_EQ].
+ * EQ presets for [Commands.SET_EQ]. Values follow the official app's `initSimpleEQItem()`
+ * (CONFIRMED): 0 Balanced, 1 More Voice, 2 More Treble, 3 More Bass, 5 Custom. The declared
+ * order also drives the order they are shown in the equalizer screen.
  */
 enum class EqPreset(val value: Byte) {
     BALANCED(0x00),
-    MORE_BASS(0x01),
+    MORE_BASS(0x03),
     MORE_TREBLE(0x02),
-    VOICE(0x03),
-    CUSTOM(0x04);
+    VOICE(0x01),
+    CUSTOM(0x05);
 
     companion object {
         /** Value → preset, precomputed for O(1) lookups. */

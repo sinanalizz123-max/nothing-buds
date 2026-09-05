@@ -126,6 +126,7 @@ data class DeviceModel(
     val hasDiracEq: Boolean = false,         // Dirac Opteo EQ — B172/B168 only
     val hasLhdc: Boolean = false,            // LHDC/LDAC codec toggle
     val hasDetailEnhancement: Boolean = false,
+    val hasBassEnhancer: Boolean = false,     // "Ultra bass" via 0xC053/0xF057 — B172 only
     val hasCaseLed: Boolean = false,         // box LED colour — Ear (1) only
     val hasEarTipFitTest: Boolean = false,
     val hasAutoPowerOff: Boolean = true,
@@ -189,6 +190,7 @@ object DeviceModels {
         hasDiracEq = true,
         hasLhdc = true,
         hasDetailEnhancement = true,
+        hasBassEnhancer = true,
         hasEarTipFitTest = true,
     )
 

@@ -712,7 +712,6 @@ class BudsService : Service() {
             PacketBuilder.readEq(),
             PacketBuilder.readExtraFeatures(),
             PacketBuilder.readLowLatency(),
-            PacketBuilder.readBassBoost(),
             PacketBuilder.readSpatialAudio(),
             PacketBuilder.setUtcTime(),
         )
@@ -732,6 +731,11 @@ class BudsService : Service() {
             if (model == null || model.hasAutoPowerOff) add(PacketBuilder.readPowerOff())
             if (model == null || model.hasCaseLed) add(PacketBuilder.readCaseLed())
             if (model == null || model.hasDetailEnhancement) add(PacketBuilder.readDetailEnhancement())
+            if (model?.hasBassEnhancer == true) {
+                add(PacketBuilder.readBassEnhancer())
+            } else {
+                add(PacketBuilder.readBassBoost())
+            }
         }
 
         (opening + extras).forEach { packet ->
@@ -810,8 +814,28 @@ class BudsService : Service() {
                 }
             }
 
+            Commands.RESPONSE_BASS_ENHANCER -> {
+                val bass = ResponseParser.parseBassEnhancer(response.payload)
+                Log.d(TAG, "Bass enhancer: $bass")
+                if (bass != null) {
+                    updateState { it.copy(enhancedBass = bass.enabled, bassLevel = bass.level) }
+                }
+            }
+
+            Commands.ACK_SET_BASS_BOOST -> {
+                sendCommand(PacketBuilder.readBassBoost())
+            }
+
+            Commands.ACK_SET_BASS_ENHANCER -> {
+                sendCommand(PacketBuilder.readBassEnhancer())
+            }
+
             Commands.RESPONSE_SPATIAL_AUDIO -> {
-                val enabled = response.payload.firstOrNull()?.toInt() == 1
+                val enabled = if (response.payload.size > 1) {
+                    response.payload[1].toInt() == 1
+                } else {
+                    response.payload.firstOrNull()?.toInt() == 1
+                }
                 Log.d(TAG, "Spatial audio: $enabled")
                 updateState { it.copy(spatialAudio = enabled) }
             }
@@ -1035,8 +1059,23 @@ class BudsService : Service() {
 
     /** Switch which paired device multipoint is actively using. */
     fun setConnectDevice(mac: String) {
+        val bytes = try {
+            mac.split(":")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .mapNotNull { it.toIntOrNull(16)?.toByte() }
+                .take(6)
+                .toByteArray()
+        } catch (e: Exception) {
+            ByteArray(0)
+        }
+        if (bytes.size != 6) {
+            // A malformed MAC (or one from a washed-out device) must never crash the picker.
+            Log.w(TAG, "Ignoring invalid dual device MAC: $mac")
+            return
+        }
         Log.d(TAG, "Switching dual device to $mac")
-        sendCommand(PacketBuilder.setConnectDevice(mac.hexToBytes()))
+        sendCommand(PacketBuilder.setConnectDevice(bytes))
     }
 
     fun setDiracEq(level: Int) {
@@ -1084,38 +1123,26 @@ class BudsService : Service() {
     }
 
     /**
-     * Bass boost is a level, not a switch. Turning it on without a level restores the last one,
-     * which is what the official app does.
-     *
-     * Spatial audio and bass boost are mutually exclusive in firmware: with spatial audio on the
-     * earbuds acknowledge a bass write and then ignore it, so spatial audio is switched off first
-     * rather than leaving the user with a slider that does nothing.
+     * "Ultra bass". Espeon (CMF Buds Pro 2) answers the bass-enhancer command, the other models
+     * answer the older bass-boost command, so the write is dispatched per model.
      */
     fun setBassBoost(enabled: Boolean, level: Int = BudsRepository.state.value.bassLevel) {
         val effectiveLevel = if (enabled && level <= 0) 1 else level
-        Log.d(TAG, "Setting bass boost: enabled=$enabled level=$effectiveLevel")
+        Log.d(TAG, "Setting bass: enabled=$enabled level=$effectiveLevel")
 
-        if (enabled && BudsRepository.state.value.spatialAudio) {
-            Log.d(TAG, "Spatial audio blocks bass boost, turning it off first")
-            sendCommand(PacketBuilder.setSpatialAudio(false))
-            updateState { it.copy(spatialAudio = false) }
+        if (BudsRepository.state.value.deviceModel?.hasBassEnhancer == true) {
+            sendCommand(PacketBuilder.setBassEnhancer(enabled, effectiveLevel))
+        } else {
+            sendCommand(PacketBuilder.setBassBoost(enabled, effectiveLevel))
         }
-
-        sendCommand(PacketBuilder.setBassBoost(enabled, effectiveLevel))
         updateState { it.copy(enhancedBass = enabled, bassLevel = effectiveLevel) }
     }
 
-    /** Enabling spatial audio drops bass boost, matching what the firmware enforces anyway. */
+    /** Spatial audio runs alongside bass on these earbuds; neither write shuts the other off. */
     fun setSpatialAudio(enabled: Boolean) {
         Log.d(TAG, "Setting spatial audio: $enabled")
         sendCommand(PacketBuilder.setSpatialAudio(enabled))
         updateState { it.copy(spatialAudio = enabled) }
-
-        if (enabled && BudsRepository.state.value.enhancedBass) {
-            Log.d(TAG, "Bass boost cannot run alongside spatial audio, turning it off")
-            sendCommand(PacketBuilder.setBassBoost(false, BudsRepository.state.value.bassLevel))
-            updateState { it.copy(enhancedBass = false) }
-        }
     }
 
     /**
