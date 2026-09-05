@@ -1,0 +1,191 @@
+package com.nothing.base.protocol.constant;
+
+import kotlin.Metadata;
+
+/* JADX INFO: compiled from: ProtocolConstant.kt */
+/* JADX INFO: loaded from: /tmp/source/classes6.dex */
+@Metadata(d1 = {"\u0000\f\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0007\b\u00c6\u0002\u0018\u00002\u00020\u0001:\u0004\u0004\u0005\u0006\u0007B\t\b\u0002\u00a2\u0006\u0004\b\u0002\u0010\u0003\u00a8\u0006\b"}, d2 = {"Lcom/nothing/base/protocol/constant/ProtocolConstant;", "", "<init>", "()V", "Set", "Notification", "Query", "Debug", "nt_ear_GoogleStoreRelease"}, k = 1, mv = {2, 1, 0}, xi = 48)
+public final class ProtocolConstant {
+    public static final ProtocolConstant INSTANCE = new ProtocolConstant();
+
+    /* JADX INFO: compiled from: ProtocolConstant.kt */
+    @Metadata(d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0003\n\u0002\u0010\b\n\u0002\b/\b\u00c6\u0002\u0018\u00002\u00020\u0001B\t\b\u0002\u00a2\u0006\u0004\b\u0002\u0010\u0003R\u000e\u0010\u0004\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\r\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0010\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0011\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0012\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0013\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0014\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0015\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0016\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0017\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0018\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0019\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001a\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001c\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001d\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010!\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\"\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010#\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010$\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010%\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010&\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010'\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010(\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010)\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010*\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010+\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010,\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010-\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010.\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010/\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00100\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00101\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00102\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00103\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000\u00a8\u00064"}, d2 = {"Lcom/nothing/base/protocol/constant/ProtocolConstant$Set;", "", "<init>", "()V", "HOST_SET_COMMANDS", "", "SET_PROTOCOL_ACTIVATED", "SET_WHERE_AM_I", "SET_KEY_CONFIGURATION", "SET_EXTRA_FEATURE_STATUS", "SET_EQ_STATUS", "SET_HIGH_VOLUME_GAIN_LEVEL", "SET_UTC_TIME", "SET_AUTO_POWER_OFF_TIME", "SET_BOX_LED_COLOR", "SET_NOISE_REDUCTION_CONFIGURATION", "SET_CURRENT_NOISE_REDUCTION", "SET_EQ_MODE", "RESTORE_FACTORY_SETTING", "REGISTER_NOTIFICATION", "UNREGISTER_NOTIFICATION", "SET_LAG_MODE", "SET_CUSTOM_EQ", "SET_ADAPTIVE_EQ", "SET_PERSONALIZED", "SET_CALIBRATION", "SET_CALIBRATION_FORCE", "SET_LEAK_DETECT", "SET_CONNECT_DEVICE", "SET_MIMI_ENABLE", "SET_MIMI_INTENSITY", "SET_MIMI_PRESET_PAYLOAD", "SET_MIMI_PRESET_ID", "SET_3D_SOUND", "SET_DUAL_ENABLE", "OTA_FIND_NEW_VERSION", "OTA_DOWNLOADED_NEW_VERSION", "OTA_STOP_ERROR", "SET_LHDC_COMMANDS", "SET_BASS_BOOST", "SET_SPATIAL_AUDIO", "SET_FIR_ANC_MODE", "SET_BASS_ENHANCER_MODE", "SET_SMART_ANC_MODE", "SET_SMART_FREE_MODE", "SET_LE_SWITCH_MODEL", "SET_SYSTEM_AUDIO", "SET_ESSENTIAL_SAPCE_STATUS", "SET_DETAIL_ENHANCEMENT", "SET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_MODE", "SET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_VALUE", "SET_SCENARIO_MODE", "nt_ear_GoogleStoreRelease"}, k = 1, mv = {2, 1, 0}, xi = 48)
+    public static final class Set {
+        public static final int HOST_SET_COMMANDS = 61440;
+        public static final Set INSTANCE = new Set();
+        public static final int OTA_DOWNLOADED_NEW_VERSION = 61509;
+        public static final int OTA_FIND_NEW_VERSION = 61508;
+        public static final int OTA_STOP_ERROR = 61510;
+        public static final int REGISTER_NOTIFICATION = 61502;
+        public static final int RESTORE_FACTORY_SETTING = 61501;
+        public static final int SET_3D_SOUND = 61465;
+        public static final int SET_ADAPTIVE_EQ = 61506;
+        public static final int SET_AUTO_POWER_OFF_TIME = 61451;
+        public static final int SET_BASS_BOOST = 61521;
+        public static final int SET_BASS_ENHANCER_MODE = 61527;
+        public static final int SET_BOX_LED_COLOR = 61453;
+        public static final int SET_CALIBRATION = 61458;
+        public static final int SET_CALIBRATION_FORCE = 61459;
+        public static final int SET_CONNECT_DEVICE = 61467;
+        public static final int SET_CURRENT_NOISE_REDUCTION = 61455;
+        public static final int SET_CUSTOM_EQ = 61505;
+        public static final int SET_DETAIL_ENHANCEMENT = 61545;
+        public static final int SET_DUAL_ENABLE = 61466;
+        public static final int SET_EQ_MODE = 61456;
+        public static final int SET_EQ_STATUS = 61447;
+        public static final int SET_ESSENTIAL_SAPCE_STATUS = 61538;
+        public static final int SET_EXTRA_FEATURE_STATUS = 61444;
+        public static final int SET_FIR_ANC_MODE = 61523;
+        public static final int SET_HIGH_VOLUME_GAIN_LEVEL = 61448;
+        public static final int SET_KEY_CONFIGURATION = 61443;
+        public static final int SET_LAG_MODE = 61504;
+        public static final int SET_LEAK_DETECT = 61460;
+        public static final int SET_LE_SWITCH_MODEL = 61530;
+        public static final int SET_LHDC_COMMANDS = 61468;
+        public static final int SET_MIMI_ENABLE = 61461;
+        public static final int SET_MIMI_INTENSITY = 61462;
+        public static final int SET_MIMI_PRESET_ID = 61464;
+        public static final int SET_MIMI_PRESET_PAYLOAD = 61463;
+        public static final int SET_NOISE_REDUCTION_CONFIGURATION = 61454;
+        public static final int SET_PERSONALIZED = 61457;
+        public static final int SET_PROTOCOL_ACTIVATED = 61441;
+        public static final int SET_SCENARIO_MODE = 61557;
+        public static final int SET_SMART_ANC_MODE = 61529;
+        public static final int SET_SMART_FREE_MODE = 61528;
+        public static final int SET_SPATIAL_AUDIO = 61522;
+        public static final int SET_SYSTEM_AUDIO = 61531;
+        public static final int SET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_MODE = 61548;
+        public static final int SET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_VALUE = 61549;
+        public static final int SET_UTC_TIME = 61450;
+        public static final int SET_WHERE_AM_I = 61442;
+        public static final int UNREGISTER_NOTIFICATION = 61503;
+
+        private Set() {
+        }
+    }
+
+    private ProtocolConstant() {
+    }
+
+    /* JADX INFO: compiled from: ProtocolConstant.kt */
+    @Metadata(d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0003\n\u0002\u0010\b\n\u0002\b\u0012\b\u00c6\u0002\u0018\u00002\u00020\u0001B\t\b\u0002\u00a2\u0006\u0004\b\u0002\u0010\u0003R\u000e\u0010\u0004\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\r\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0010\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0011\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0012\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0013\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0014\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0015\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0016\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000\u00a8\u0006\u0017"}, d2 = {"Lcom/nothing/base/protocol/constant/ProtocolConstant$Notification;", "", "<init>", "()V", "NOTIFICATION_COMMANDS", "", "EVENT_BATTERY_CHANGED", "EVENT_DEVICE_STATUS_CHANGED", "EVENT_NOISE_REDUCTION_LEVEL_CHANGED", "EVENT_GAME_MODE_CHANGED", "EVENT_WORKING_STATUS_CHANGE", "EVENT_LED_COLOR_SYNC_NOTIFICATION", "EVENT_TIP_FIT_RESULT", "NOTIFY_DISCONNECT_PROFILE", "NOTIFY_REQUEST_START_OTA", "NOTIFY_REQUEST_STOP_OTA", "EVENT_PERSONALIZE_SYNC_NOTIFICATION", "EVENT_DUAL_DEVICE_CONNECT_STATE", "EVENT_DUAL_DEVICE_SWITCH_STATE", "EVENT_MAGIC_BUTTON", "EVENT_HEAD_TRACK", "EVENT_LE_AUDIO_CONNECT", "EVENT_RECORDING", "nt_ear_GoogleStoreRelease"}, k = 1, mv = {2, 1, 0}, xi = 48)
+    public static final class Notification {
+        public static final int EVENT_BATTERY_CHANGED = 57345;
+        public static final int EVENT_DEVICE_STATUS_CHANGED = 57346;
+        public static final int EVENT_DUAL_DEVICE_CONNECT_STATE = 57358;
+        public static final int EVENT_DUAL_DEVICE_SWITCH_STATE = 57350;
+        public static final int EVENT_GAME_MODE_CHANGED = 57349;
+        public static final int EVENT_HEAD_TRACK = 57365;
+        public static final int EVENT_LED_COLOR_SYNC_NOTIFICATION = 57355;
+        public static final int EVENT_LE_AUDIO_CONNECT = 57366;
+        public static final int EVENT_MAGIC_BUTTON = 57364;
+        public static final int EVENT_NOISE_REDUCTION_LEVEL_CHANGED = 57347;
+        public static final int EVENT_PERSONALIZE_SYNC_NOTIFICATION = 57356;
+        public static final int EVENT_RECORDING = 57368;
+        public static final int EVENT_TIP_FIT_RESULT = 57357;
+        public static final int EVENT_WORKING_STATUS_CHANGE = 57353;
+        public static final Notification INSTANCE = new Notification();
+        public static final int NOTIFICATION_COMMANDS = 57344;
+        public static final int NOTIFY_DISCONNECT_PROFILE = 57359;
+        public static final int NOTIFY_REQUEST_START_OTA = 57360;
+        public static final int NOTIFY_REQUEST_STOP_OTA = 57361;
+
+        private Notification() {
+        }
+    }
+
+    /* JADX INFO: compiled from: ProtocolConstant.kt */
+    @Metadata(d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0003\n\u0002\u0010\b\n\u0002\b?\b\u00c6\u0002\u0018\u00002\u00020\u0001B\t\b\u0002\u00a2\u0006\u0004\b\u0002\u0010\u0003R\u000e\u0010\u0004\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\r\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0010\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0011\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0012\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0013\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0014\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0015\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0016\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0017\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0018\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0019\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001a\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001c\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001d\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010!\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\"\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010#\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010$\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010%\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010&\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010'\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010(\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010)\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010*\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010+\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010,\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010-\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010.\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010/\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00100\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00101\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00102\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00103\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00104\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00105\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00106\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00107\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00108\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u00109\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010:\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010;\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010<\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010=\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010>\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010?\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010@\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010A\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010B\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010C\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000\u00a8\u0006D"}, d2 = {"Lcom/nothing/base/protocol/constant/ProtocolConstant$Query;", "", "<init>", "()V", "QUERY_COMMANDS", "", "GET_PROTOCOL_VERSION", "GET_FIND_EAR_STATE", "GET_REMOTE_MTU", "GET_REMOTE_VID", "GET_REMOTE_DEVICE_IDENTIFICATION", "GET_REMOTE_CONFIGURATION", "GET_REMOTE_BATTERY_LEVEL", "GET_UPGRADE_CAPABILITY", "GET_SUPPORTED_GESTURE", "GET_EARPHONE_STATUS", "GET_REMOTE_EXTRA_VERSION_CODE", "GET_REMOTE_COLOR_ID", "GET_SUPPORTED_FEATURE", "GET_EXTRA_FEATURE_STATUS", "GET_EQ_ID", "GET_HIGH_VOLUME_GAIN_LEVEL", "GET_AUTO_POWER_OFF_TIME", "GET_EARPHONE_CONNECTED_STATUS", "GET_VOLUME", "GET_CODEC_CAPABILITY", "GET_MANUFACTURE", "GET_BOX_LED_COLOR", "GET_KEY_CONFIGURATION", "GET_DEVICE_WORKING_STATUS", "GET_PERSONALIZED_ANC", "GET_NOISE_REDUCTION_CONFIGURATION", "GET_CURRENT_NOISE_REDUCTION", "GET_EQ_MODE", "GET_SUPPORTED_NOTIFICATION", "GET_REGISTERED_NOTIFICATION", "GET_HOST_UTC_TIME", "GET_HOST_LAG_MODE", "GET_PERSONALIZED_NOISE_VALUE", "GET_DEVICE_MODEL", "GET_DUAL_ENABLE", "GET_MIMI_ENABLE", "GET_MIMI_INTENSITY", "GET_MIMI_PRESET_ID", "GET_MIMI_FITTING_TECH_LEVEL", "GET_3D_MODE", "GET_HOST_VERSION_DEVICE", "GET_ADAPTIVE_EQ_MODE", "GET_CUSTOM_EQ_VALUE", "GET_LHDC_COMMANDS", "GET_DUAL_DEVICE_LIST", "GET_BASS_BOOST", "GET_SPATIAL_AUDIO", "GET_ANC_FIR_MODE", "GET_BASS_ENHANCER_MODE", "GET_SMART_ANC_MODE", "GET_SMART_FREE_MODE", "GET_LE_SWITCH", "GET_SYSTEM_AUDIO", "GET_HEADTRACK_START", "GET_LE_AUDIO_CONNECT_MODE", "GET_BOX_VERSION", "GET_MUTUALLY_EXCLUSIVE", "GET_DETAIL_ENHANCEMENT", "GET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_MODE", "GET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_VALUE", "GET_SKY_WALK_SUPPORT", "GET_SCENARIO_MODE", "nt_ear_GoogleStoreRelease"}, k = 1, mv = {2, 1, 0}, xi = 48)
+    public static final class Query {
+        public static final int GET_3D_MODE = 49190;
+        public static final int GET_ADAPTIVE_EQ_MODE = 49219;
+        public static final int GET_ANC_FIR_MODE = 49233;
+        public static final int GET_AUTO_POWER_OFF_TIME = 49169;
+        public static final int GET_BASS_BOOST = 49230;
+        public static final int GET_BASS_ENHANCER_MODE = 49235;
+        public static final int GET_BOX_LED_COLOR = 49175;
+        public static final int GET_BOX_VERSION = 49244;
+        public static final int GET_CODEC_CAPABILITY = 49173;
+        public static final int GET_CURRENT_NOISE_REDUCTION = 49182;
+        public static final int GET_CUSTOM_EQ_VALUE = 49220;
+        public static final int GET_DETAIL_ENHANCEMENT = 49257;
+        public static final int GET_DEVICE_MODEL = 49180;
+        public static final int GET_DEVICE_WORKING_STATUS = 49177;
+        public static final int GET_DUAL_DEVICE_LIST = 49192;
+        public static final int GET_DUAL_ENABLE = 49191;
+        public static final int GET_EARPHONE_CONNECTED_STATUS = 49171;
+        public static final int GET_EARPHONE_STATUS = 49162;
+        public static final int GET_EQ_ID = 49167;
+        public static final int GET_EQ_MODE = 49183;
+        public static final int GET_EXTRA_FEATURE_STATUS = 49166;
+        public static final int GET_FIND_EAR_STATE = 49154;
+        public static final int GET_HEADTRACK_START = 49240;
+        public static final int GET_HIGH_VOLUME_GAIN_LEVEL = 49168;
+        public static final int GET_HOST_LAG_MODE = 49217;
+        public static final int GET_HOST_UTC_TIME = 49215;
+        public static final int GET_HOST_VERSION_DEVICE = 49218;
+        public static final int GET_KEY_CONFIGURATION = 49176;
+        public static final int GET_LE_AUDIO_CONNECT_MODE = 49241;
+        public static final int GET_LE_SWITCH = 49238;
+        public static final int GET_LHDC_COMMANDS = 49193;
+        public static final int GET_MANUFACTURE = 49174;
+        public static final int GET_MIMI_ENABLE = 49186;
+        public static final int GET_MIMI_FITTING_TECH_LEVEL = 49189;
+        public static final int GET_MIMI_INTENSITY = 49187;
+        public static final int GET_MIMI_PRESET_ID = 49188;
+        public static final int GET_MUTUALLY_EXCLUSIVE = 49250;
+        public static final int GET_NOISE_REDUCTION_CONFIGURATION = 49181;
+        public static final int GET_PERSONALIZED_ANC = 49184;
+        public static final int GET_PERSONALIZED_NOISE_VALUE = 49185;
+        public static final int GET_PROTOCOL_VERSION = 49153;
+        public static final int GET_REGISTERED_NOTIFICATION = 49214;
+        public static final int GET_REMOTE_BATTERY_LEVEL = 49159;
+        public static final int GET_REMOTE_COLOR_ID = 49164;
+        public static final int GET_REMOTE_CONFIGURATION = 49158;
+        public static final int GET_REMOTE_DEVICE_IDENTIFICATION = 49157;
+        public static final int GET_REMOTE_EXTRA_VERSION_CODE = 49163;
+        public static final int GET_REMOTE_MTU = 49155;
+        public static final int GET_REMOTE_VID = 49156;
+        public static final int GET_SCENARIO_MODE = 49265;
+        public static final int GET_SKY_WALK_SUPPORT = 49251;
+        public static final int GET_SMART_ANC_MODE = 49237;
+        public static final int GET_SMART_FREE_MODE = 49236;
+        public static final int GET_SPATIAL_AUDIO = 49231;
+        public static final int GET_SUPPORTED_FEATURE = 49165;
+        public static final int GET_SUPPORTED_GESTURE = 49161;
+        public static final int GET_SUPPORTED_NOTIFICATION = 49213;
+        public static final int GET_SYSTEM_AUDIO = 49239;
+        public static final int GET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_MODE = 49260;
+        public static final int GET_THIRD_DRIVER_ADVANCE_CUSTOM_EQ_VALUE = 49261;
+        public static final int GET_UPGRADE_CAPABILITY = 49160;
+        public static final int GET_VOLUME = 49172;
+        public static final Query INSTANCE = new Query();
+        public static final int QUERY_COMMANDS = 49152;
+
+        private Query() {
+        }
+    }
+
+    /* JADX INFO: compiled from: ProtocolConstant.kt */
+    @Metadata(d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0003\n\u0002\u0010\b\n\u0002\b\u000e\b\u00c6\u0002\u0018\u00002\u00020\u0001B\t\b\u0002\u00a2\u0006\u0004\b\u0002\u0010\u0003R\u000e\u0010\u0004\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\r\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000e\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000f\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0010\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0011\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0012\u001a\u00020\u0005X\u0086T\u00a2\u0006\u0002\n\u0000\u00a8\u0006\u0013"}, d2 = {"Lcom/nothing/base/protocol/constant/ProtocolConstant$Debug;", "", "<init>", "()V", "COMMANDS", "", "ENTER_TEST_MODE", "PARAMETER_NEGOTIATION", "GET_FILE_LIST", "QUERY_SINGLE_FILE_INFO", "REQUEST_SINGLE_FILE_INFO", "DEVICE_SEND_DATA", "EXIT_TEST_MODE", "CHANGE_LEVEL", "GET_DEBUG_INFO", "BURIED_DEVICE_SEND", "BURIED_LOG_INFO", "BURIED_LOG_REQUEST", "DEBUG_CURVE_COMMAND", "nt_ear_GoogleStoreRelease"}, k = 1, mv = {2, 1, 0}, xi = 48)
+    public static final class Debug {
+        public static final int BURIED_DEVICE_SEND = 64544;
+        public static final int BURIED_LOG_INFO = 64545;
+        public static final int BURIED_LOG_REQUEST = 64546;
+        public static final int CHANGE_LEVEL = 64520;
+        public static final int COMMANDS = 64512;
+        public static final int DEBUG_CURVE_COMMAND = 64560;
+        public static final int DEVICE_SEND_DATA = 64518;
+        public static final int ENTER_TEST_MODE = 64513;
+        public static final int EXIT_TEST_MODE = 64519;
+        public static final int GET_DEBUG_INFO = 64521;
+        public static final int GET_FILE_LIST = 64515;
+        public static final Debug INSTANCE = new Debug();
+        public static final int PARAMETER_NEGOTIATION = 64514;
+        public static final int QUERY_SINGLE_FILE_INFO = 64516;
+        public static final int REQUEST_SINGLE_FILE_INFO = 64517;
+
+        private Debug() {
+        }
+    }
+}
