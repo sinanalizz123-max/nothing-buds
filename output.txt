@@ -127,6 +127,83 @@ Determination:
 Changes:
 - FALLBACK is now GestureProfile(slots = emptyList(), operations = emptyMap(), defaults = emptyMap()).
   An unknown model renders the empty gesture screen rather than offering an invented operation set.
+Task 5 — Verify all model profiles
+STATUS: DONE
+Evidence:
+
+| Model | PRODUCT_ID | SUPPORT_GESTURES | Configurable slots | Source file |
+|---|---|---|---|---|
+| Espeon | B172 | {1,2,3,7,9,10,15} | ear {2,3,7,9,15}, case {1,2,3,7,10,15} | control-src/com/nothing/espeon/control/ |
+| Heracross | B187 | (reuses Espeon) | same as Espeon | dirac-src/com/nothing/heracross/ (uses EspeonImpl) |
+| Girafarig | B179 | {1,2,3,7,9,10,15} | ear {2,3,7,9,15} (case UI exists but no case data) | control-src/com/nothing/girafarig/control/ |
+| Gligar | B184 | {1,2,3,7,9,10,15} | same as Girafarig | control-src/com/nothing/gligar/control/ |
+| Corsola | B163 | {1,2,3,7,8,9} | ear {2,3,7,8,9} | control-src/com/nothing/corsola/control/ |
+| Donphan | B168 | {2,3,7,9} | ear {2,3,7,9} | control-src/com/nothing/donphan/control/ |
+| Hoothoot | B185 | (reuses Donphan, no own control-src) | ear {2,3,7,9} | re/control-src/com/nothing/hoothoot/core/ only (device class) |
+| Crobat | B164 | {2,3,7} | ear {2,3,7} | control-src/com/nothing/crobat/control/ |
+| Elekid | B170 | {1,7} | ear {1,7} (gesture 1 = magic button) | control-src/com/nothing/elekid/control/ |
+| Ear (1) | B181 | {3,7} | ear {3,7} | control-src/com/nothing/ear/one/control/ |
+| Ear (2) | B155 | {1,2,3,7,9} | ear {2,3,7,9} (g1 is arrow-only) | control-src/com/nothing/ear/two/control/ |
+| Ear (stick) | B157 | {1,2,3,7,9} | ear {2,3,7,9} | control-src/com/nothing/ear/stick/control/ |
+| Ear (a) | B162 | {1,2,3,7,9} | ear {2,3,7,9} | control-src/com/nothing/ear/color/control/ |
+| Ear (open) | B174 | {1,2,3,7,9} | ear {2,3,7,9} (g7 side-dependent) | control-src/com/nothing/ear/flaffy/control/ |
+| Ear (twos) | B171 | {1,2,3,7,9} | ear {2,3,7,9} | control-src/com/nothing/ear/twos/control/ |
+
+Operations and defaults per gesture (from convertOptions + SUPPORT_* arrays):
+
+| Model | g2 (double) | g3 (triple) | g7 (hold) | g8/9 (hold-hold) | g1 (magic/single) | g10 (rotate) | g15 (fixed) |
+|---|---|---|---|---|---|---|---|
+| Espeon ear | {2,8,9,11}+1 def=9 | {8,9,11}+1 def=8 | {22,11}+1 def=22 | {18,19,11}+1 def=1 | n/a (case only) | n/a | arrow-only |
+| Espeon case | {2,9,8,11,17,1,3,25,1} def=1 | {2,9,8,11,17,1,26,1} def=1 | {22,11,17}+1 def=1 | n/a | {2,9,8,11,17}+1 def=1 | {23,1} def=1 | case lock |
+| Girafarig | {2,8,9,11,31,1} def=9 | {8,9,11,31,1} def=8 | {22,11,31,1} def=22 | {18,19,11,31,1} def=1 | n/a | n/a | arrow-only |
+| Gligar | same as Girafarig | same | same | same | n/a | n/a | arrow-only |
+| Corsola | {2,8,9,11} def=9 | {8,9,11} def=8 | {10,11} def=22 | {18,19,11,1} def=1 | n/a | n/a | n/a |
+| Donphan | {2,8,9,11} def=9 | {8,9,11} def=8 | {10,11} def=22 | {18,19,11} def=1 | n/a | n/a | n/a |
+| Crobat | {8,9,11} def=9 | {8,9,11} def=8 | {10} def=22 | n/a | n/a | n/a | n/a |
+| Elekid | {8,9,11} def=9 | {8,9,11} def=8 | {10,11,1} def=22 (non-magic) | n/a | {11,31,10,27,34,29,1} def=isNothingOS?32:11 | n/a | n/a |
+| Ear (1) | n/a (arrow-only) | {8,9,1} def=9 | {10,1} def=10 | n/a | n/a | n/a | n/a |
+| Ear (2) | {8,9,11} def=9 | {8,9,11} def=8 | {10,18,19,11} def=22 | {10,18,19,11,1} def=1 | n/a (arrow-only) | n/a | n/a |
+| Ear (stick) | {8,9,11} def=9 | {8,9,11} def=8 | {18,19,11} def=10 (no ANC!) | {1,18,19,11} def=1 | n/a (arrow-only) | n/a | n/a |
+| Ear (a) | {8,9,11} def=9 | {8,9,11} def=8 | {10,18,19,11} def=22 | {10,18,19,11} def=1 | n/a (arrow-only) | n/a | n/a |
+| Ear (open) | {8,9,11,31} def=9 | {8,9,11,31} def=8 | {18,19,11,31} def=SideDep(19,18) | {18,19,11,31,1} def=1 | n/a (arrow-only) | n/a | n/a |
+| Ear (twos) | {8,9,11} def=9 | {8,9,11} def=8 | {10,18,19,11} def=22 | {10,18,19,11} def=1 | n/a (arrow-only) | n/a | n/a |
+
+Conditional operations (AI News / Nothing Radio / Essential Space):
+- AI News (op 31): unconditional in Girafarig, Gligar, Ear (open). Conditional (addSupportNewsKey)
+  in Donphan, Hoothoot, Ear (a), Ear (2), Ear (twos). Absent in Espeon ear (case adds op 31
+  conditionally via isSupportNews()), Corsola, Crobat, Elekid, Ear (1), Ear (stick).
+- Nothing Radio (op 32): Elekid gesture 1, conditional on isNothingOS().
+- Essential Space (op 33): Elekid gesture 7 (button 10), conditional on isSupportEssential().
+- Nothing Radio setting (op 51): Elekid gesture 1, conditional on isNothingOS().
+
+Side-dependent defaults:
+- Ear (open) B174 gesture 7: left ear = op 19 (vol+), right ear = op 18 (vol-).
+  Source: ControlItemViewModel.java lines 146-151:
+    if (device == 2) setDefaultOperation(19);
+    else if (device == 3) setDefaultOperation(18);
+
+Button-dependent defaults:
+- Elekid B170 gesture 1: button 10 (magic button) → isNothingOS() ? 32 : 11; else no default.
+- Elekid B170 gesture 7: button 10 → isNothingOS() ? 11 : 1; else default 22.
+
+Case behavior:
+- Only Espeon B172 and Heracross B187 (reuses Espeon) have case gesture configuration.
+  Case device id = 0x04 (ControlItemViewModel.java line 225).
+  Case slots: {1, 2, 3, 7, 10, 15}. All defaults = op 1 (None).
+  See Task 3 for the full case operation tables.
+
+Changes:
+- No code changes for Task 5. All profiles were already verified against source during Task 1
+  and Task 2. The verification table above documents the audit.
+
 Verification:
-- Code-level check of GestureCapabilities.FALLBACK (now empty).
+- Every model's SUPPORT_GESTURES, SUPPORT_*_OPERATIONS arrays, and setDefaultOperation() calls
+  were re-read from the decompiled source files listed in the table.
+- Cross-checked: Hoothoot B185 has no own control-src; it reuses Donphan (its only decompiled
+  file is IOTProductDeviceHoothoot.java which sets PRODUCT_ID = "B185" but delegates to the
+  Donphan gesture protocol).
+- Heracross B187 reuses Espeon via EspeonImpl (proven by IOTProductDeviceHeracross.java:143).
+- Gligar B184 has the same ControlItemViewModel structure as Girafarig B179 with identical
+  SUPPORT arrays.
+
 Confidence: 100%.
