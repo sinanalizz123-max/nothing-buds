@@ -1,5 +1,8 @@
 package com.nothingbuds.ui.screens
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,9 +46,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
@@ -70,6 +75,21 @@ fun ExtrasScreen(
     onSetDetailEnhancement: (Boolean, Int) -> Unit,
     onStartFitTest: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val bluetoothAdapter = remember {
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    }
+
+    @SuppressLint("MissingPermission")
+    fun dualDeviceName(mac: String): String? {
+        if (bluetoothAdapter == null) return null
+        return try {
+            bluetoothAdapter.getRemoteDevice(mac)?.name
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -146,7 +166,7 @@ fun ExtrasScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp),
                     )
-                    if (state.dualDevices.isNotEmpty()) {
+                    if (state.dualDevice && state.dualDevices.isNotEmpty()) {
                         Text(
                             "Paired devices",
                             style = MaterialTheme.typography.titleSmall,
@@ -162,7 +182,10 @@ fun ExtrasScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(device.mac, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        dualDeviceName(device.mac) ?: "Unknown device",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Text(
                                         if (device.isConnected) "Active / connected" else "Tap to make active",
                                         style = MaterialTheme.typography.bodySmall,

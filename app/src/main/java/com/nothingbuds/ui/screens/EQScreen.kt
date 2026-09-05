@@ -27,7 +27,7 @@ fun EQScreen(
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
     var selectedPreset by remember { mutableStateOf(state.eqPreset) }
-    var selectedDirac by remember { mutableStateOf(state.diracEq) }
+    var diracEnabled by remember { mutableStateOf(state.diracEq >= 1) }
 
     Scaffold(
         topBar = {
@@ -51,15 +51,27 @@ fun EQScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Dirac Opteo for Dirac models (CMF Buds Pro 2 / CMF Buds). The earbuds expose a single
-            // Dirac profile; it is greyed out while the LDAC codec is active.
-            if (state.deviceModel?.hasDiracEq == true) {
-                Text(
-                    "Dirac Opteo",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+            // Dirac Opteo is just another EQ mode for Dirac models (CMF Buds Pro 2 / CMF Buds): one of the
+            // radio entries below, selected at a time. It is greyed out while the LDAC codec is on.
+            Text(
+                "Equalizer",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
 
+            EqPreset.entries.forEach { preset ->
+                EqPresetItem(
+                    preset = preset,
+                    isSelected = selectedPreset == preset && !diracEnabled,
+                    onClick = {
+                        diracEnabled = false
+                        selectedPreset = preset
+                        onSetPreset(preset)
+                    }
+                )
+            }
+
+            if (state.deviceModel?.hasDiracEq == true) {
                 if (state.lhdc) {
                     Card(
                         modifier = Modifier
@@ -100,33 +112,14 @@ fun EQScreen(
                 } else {
                     EqPresetItemGeneric(
                         label = "Dirac Opteo",
-                        description = "Standard Dirac Opteo tuning",
-                        isSelected = selectedDirac >= 1,
+                        description = "One of the equalizer modes",
+                        isSelected = diracEnabled,
                         onClick = {
-                            selectedDirac = 1
+                            diracEnabled = true
                             onSetDiracEq(1)
                         }
                     )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            Text(
-                "Presets",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            EqPreset.entries.forEach { preset ->
-                EqPresetItem(
-                    preset = preset,
-                    isSelected = selectedPreset == preset,
-                    onClick = {
-                        selectedPreset = preset
-                        onSetPreset(preset)
-                    }
-                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -171,6 +164,7 @@ fun EQScreen(
                                             }
                                         },
                                         onValueChangeFinished = {
+                                            diracEnabled = false
                                             selectedPreset = EqPreset.CUSTOM
                                             onSetCustomEq(customBands)
                                         }
@@ -194,6 +188,8 @@ fun EQScreen(
                         OutlinedButton(
                             onClick = {
                                 customBands = IntArray(8) { 0 }
+                                diracEnabled = false
+                                selectedPreset = EqPreset.CUSTOM
                                 onSetCustomEq(customBands)
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally)

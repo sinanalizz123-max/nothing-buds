@@ -54,6 +54,9 @@ class BudsService : Service() {
         private const val NOTIF_THROTTLE_MS = 500L
         private const val CONNECT_MAX_ATTEMPTS = 3
         private const val CONNECT_RETRY_BASE_MS = 1_500L
+        private const val RECONNECT_INITIAL_DELAY_MS = 2_000L
+        private const val RECONNECT_MAX_BACKOFF_MS = 8_000L
+        private const val RECONNECT_MAX_ATTEMPTS = 50
         private const val REBOOT_TONE_MS = 500L
 
         // Nothing/CMF SPP UUID
@@ -89,6 +92,8 @@ class BudsService : Service() {
     private var a2dpProfile: BluetoothA2dp? = null
     private var isConnecting = false  // Prevent multiple connection attempts
     private var isDestroying = false  // Avoid stopSelf() while already tearing down
+    private var reconnectJob: Job? = null
+    private var disconnectRequestedByUser = false
 
     /**
      * Serializes writes to the socket. Every caller enqueues here and a single writer coroutine
@@ -154,6 +159,10 @@ class BudsService : Service() {
         super.onCreate()
         Log.d(TAG, "Service created")
 
+        reconnectJob?.cancel()
+        reconnectJob = null
+        disconnectRequestedByUser = false
+
         // Load saved state to show last known values while connecting
         loadSavedState()?.let { savedState ->
             Log.d(TAG, "Loaded saved state: ${savedState.deviceName}, ANC=${savedState.ancMode}")
@@ -188,9 +197,11 @@ class BudsService : Service() {
                 checkConnectedDevices()
             }
 
-            // Nothing answered: don't leave a dangling "Connecting…" notification behind.
+            // Nothing answered within the grace period AND there is no saved device worth waiting on:
+            // don't leave a dangling "Connecting…" notification behind. With a saved device the
+            // reconnect loop keeps waiting for it (reboots are normal on codec/dual changes).
             delay(CONNECT_GRACE_MS)
-            if (!BudsRepository.state.value.isConnected) {
+            if (!BudsRepository.state.value.isConnected && getSavedDeviceAddress() == null) {
                 Log.d(TAG, "No earbuds connected within grace period, stopping")
                 stopNotification()
             }
@@ -250,6 +261,8 @@ class BudsService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
         isDestroying = true
+        reconnectJob?.cancel()
+        reconnectJob = null
         try {
             unregisterReceiver(bluetoothReceiver)
         } catch (e: Exception) {
@@ -308,7 +321,7 @@ class BudsService : Service() {
         // Match on the stable MAC rather than the mutable Bluetooth name.
         if (BudsRepository.state.value.deviceAddress == device.address) {
             Log.d(TAG, "Our connected device disconnected")
-            disconnect()
+            softDisconnect()
         }
     }
 
@@ -371,7 +384,7 @@ class BudsService : Service() {
                 }
                 if (!connected) {
                     Log.w(TAG, "All connect attempts exhausted")
-                    disconnect()
+                    softDisconnect()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to connect", e)
@@ -459,6 +472,7 @@ class BudsService : Service() {
                     deviceModel = deviceModel
                 )
             }
+            disconnectRequestedByUser = false
 
             updateNotification()
 
@@ -493,6 +507,9 @@ class BudsService : Service() {
     }
 
     fun disconnect() {
+        disconnectRequestedByUser = true
+        reconnectJob?.cancel()
+        reconnectJob = null
         isConnecting = false
         Log.d(TAG, "Disconnecting...")
         readJob?.cancel()
@@ -519,6 +536,71 @@ class BudsService : Service() {
 
         updateState { EarbudsState() }
         stopNotification()
+    }
+
+    /**
+     * Tears down the SPP socket after the buds dropped out from under us (ACL loss or a socket
+     * error) but keeps the foreground service alive and quietly retries the saved device, because
+     * switching codec or dual mode reboots the buds and they come straight back at the OS level.
+     */
+    private fun softDisconnect() {
+        reconnectJob?.cancel()
+        isConnecting = false
+        Log.d(TAG, "Soft disconnect - scheduling reconnect")
+        readJob?.cancel()
+        pollJob?.cancel()
+        writeJob?.cancel()
+        // Drop anything still queued so stale commands are never replayed onto the next connection.
+        while (commandChannel.tryReceive().isSuccess) {
+            // drain
+        }
+
+        try {
+            inputStream?.close()
+            outputStream?.close()
+            bluetoothSocket?.close()
+        } catch (e: IOException) {
+            Log.e(TAG, "Error closing socket", e)
+        }
+
+        inputStream = null
+        outputStream = null
+        bluetoothSocket = null
+
+        updateState { it.copy(isConnected = false) }
+
+        val savedAddress = getSavedDeviceAddress()
+        if (savedAddress == null || disconnectRequestedByUser) {
+            stopNotification()
+            return
+        }
+
+        // Keep the foreground hub up with a "Connecting…" label so the user sees we are still
+        // waiting on the buds instead of silently shutting down.
+        startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+
+        reconnectJob = serviceScope.launch {
+            var attempt = 0
+            var nextDelay = RECONNECT_INITIAL_DELAY_MS
+            while (isActive && !disconnectRequestedByUser && attempt < RECONNECT_MAX_ATTEMPTS) {
+                delay(nextDelay)
+                if (BudsRepository.state.value.isConnected) break
+
+                val adapter =
+                    (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+                val saved = getSavedDeviceAddress()
+                if (adapter != null && adapter.isEnabled && saved != null && hasBluetoothPermission()) {
+                    attempt++
+                    Log.d(TAG, "Reconnect attempt $attempt/$RECONNECT_MAX_ATTEMPTS -> $saved")
+                    connect(saved)
+                }
+                nextDelay = minOf(RECONNECT_MAX_BACKOFF_MS, nextDelay + RECONNECT_INITIAL_DELAY_MS)
+            }
+            if (!BudsRepository.state.value.isConnected) {
+                Log.d(TAG, "Reconnect attempts exhausted, going quiet")
+                stopNotification()
+            }
+        }
     }
 
     /**
@@ -591,12 +673,13 @@ class BudsService : Service() {
                         }
                     } else if (bytesRead < 0) {
                         Log.w(TAG, "Read returned -1, connection closed")
+                        if (isActive) softDisconnect()
                         break
                     }
                 } catch (e: IOException) {
                     if (isActive) {
                         Log.e(TAG, "Read error: ${e.message}")
-                        disconnect()
+                        softDisconnect()
                     }
                     break
                 }
