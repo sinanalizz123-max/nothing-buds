@@ -272,11 +272,93 @@ Changes:
   commit 9e6e925; the per-model capability tables added in this branch are consumed by the UI
   and do not change the wire format.
 
-Verification:
-- Traced every call from GestureScreen.GestureSlotRow → MainActivity → BudsService.setGesture
-  → PacketBuilder.setGesture → wire bytes, and the reverse path from ACK → readGestures →
-  parseGestures → state.gestures → UI.
-- Confirmed device ids match the espeon source.
-- Confirmed the payload layout matches the GET_KEY_CONFIGURATION response layout.
+Task 7 — Final build and static audit
+STATUS: DONE (static audit only; build deferred per user instruction)
+Evidence:
 
-Confidence: 100%.
+Static checks performed:
+
+1. Source search for old universal gesture fallback:
+   - `earbudSlots`, `CASE_SLOTS`, `allowedActionIds`, `isFixedSlot` — all removed.
+   - Only remaining reference is `fixedSlotLabel` (the helper for "Not configurable" / "Case
+     lock" labels), which is a legitimate per-slot label function, not a universal fallback.
+   - `grep "listOf(8.*9.*11)" app/src/main/java/com/nothingbuds/` returns matches ONLY in
+     GestureCapabilities.kt (the per-model tables). No universal operation union remains.
+
+2. Source search for B172-only hardcoded checks:
+   - `grep "modelId == \"B172\"" app/src/main/java/com/nothingbuds/` returns no matches.
+   - The only model-id check is `GestureCapabilities.profileFor(modelId)` which dispatches
+     to the per-model profile table.
+
+3. Verify GestureScreen uses capability profiles everywhere:
+   - GestureScreen.kt line 63: `val profile = remember(state.deviceModel?.id) { GestureCapabilities.profileFor(state.deviceModel?.id) }`
+   - SideCard (line 80-86) uses `profile.slots`.
+   - CaseCard (line 112-126) uses `profile.caseSlots` and only renders when
+     `state.deviceModel?.hasSmartDial == true && profile.caseSlots.isNotEmpty()`.
+   - GestureSlotRow (line 140-141) uses `profile.operationsFor(side, slot.type)` for the
+     dropdown items and `profile.defaultFor(side, slot.type, context)` for the fallback.
+   - No hardcoded B172-specific logic remains in the UI.
+
+4. Verify B172/B187 Smart Dial:
+   - B172 and B187 both map to ESPEON in the PROFILES map.
+   - ESPEON has caseSlots = {1, 2, 3, 7, 10, 15} with full case operation lists and defaults.
+   - GestureScreen renders the case card when `hasSmartDial == true` (B172 only; B187 is
+     not in DeviceModels.ALL_MODELS — see Limitations).
+
+5. Verify case handling:
+   - Only ESPEON profile has caseSlots/caseOperations/caseDefaults.
+   - All other profiles correctly have empty caseSlots.
+   - PacketBuilder.SIDE_CASE = 0x04 (confirmed from espeon ControlItemViewModel.java:225).
+
+6. Verify no unsupported operation union remains:
+   - FALLBACK profile is empty (no slots, no operations, no defaults).
+   - An unknown model id renders an empty gesture screen.
+
+Build / tests:
+- No unit tests exist (app/src/test/ is empty).
+- No instrumented tests exist (app/src/androidTest/ is empty).
+- Gradle build was NOT triggered (user instruction: "do not trigger the building").
+  When the user approves a build, run `./gradlew assembleDebug` locally or push to
+  `gesture-capabilities` to trigger the GitHub Actions workflow.
+
+Pre-existing issues found (out of scope, not fixed):
+- B170 (Elekid) and B187 (Heracross) are missing from DeviceModels.ALL_MODELS
+  (app/src/main/java/com/nothingbuds/data/EarbudsState.kt:344-358). These models have
+  gesture profiles in GestureCapabilities but the app will not identify the device as
+  these models via findByName/findByFastPairId. They would fall back to FALLBACK
+  (empty profile) at runtime.
+- B164 (Crobat / CMF Neckband Pro) has `hasGestureControl = false`
+  (EarbudsState.kt:341) but the decompiled source shows it supports gestures 2, 3, 7.
+  This means the gesture screen is currently hidden for the Neckband Pro even though
+  the model has gesture support.
+- The 16-bit length field in PacketBuilder.build() is a latent bug for payloads > 255
+  bytes (only the low byte is written, the high byte is hardcoded 0x00). Gesture writes
+  use 5-byte payloads so they are unaffected. The fix is out of scope for this branch.
+
+Changes:
+- No code changes for Task 7. The static audit found no issues introduced by this branch.
+
+Verification:
+- All grep searches returned the expected results (only legitimate references in
+  GestureCapabilities.kt and GestureScreen.kt).
+- Cross-referenced ALL_MODELS against the profile table; found two missing entries and
+  one incorrect capability flag (documented above, not fixed per "do not make unrelated
+  changes").
+
+Confidence: 100% on the static audit; build verification deferred to user.
+
+OVERALL STATUS: ALL TASKS COMPLETE (static audit + 6 source-verified tasks).
+
+Remaining uncertainties:
+1. Elekid button-10 defaults (gesture 1 → isNothingOS()?32:11, gesture 7 button 10 →
+   isNothingOS()?11:1) are captured in the DefaultOp data model but the UI does not yet
+   plumb the button id through. The field is in place; the button-10 magic row is not
+   currently rendered as a separate UI section.
+2. The visual "magic gesture" indicator (isMagicGesture() flag in the source) is not yet
+   reflected in the Compose row template. The data is correct; the styling is a separate
+   concern.
+3. The DeviceModels.ALL_MODELS list is missing B170 and B187 entries. This is a pre-existing
+   data issue, not a regression from this branch.
+4. B164's hasGestureControl flag is incorrectly false. Pre-existing.
+5. The 16-bit packet length field in build() is a latent bug for large payloads. Not
+   triggered by gesture writes; out of scope for this branch.
