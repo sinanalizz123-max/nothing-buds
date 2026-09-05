@@ -3,165 +3,266 @@
 Evidence-based write-up of how Nothing X's case-dial ("smart dial") gesture controls work,
 derived from the decompiled sources under `re/control-src/`. Every claim cites a file:line.
 Nothing here is guessed — where a link cannot be proven from the artifact it is listed under
-"Gaps".
+"UNKNOWN" / "Gaps".
 
 Same-family doc (older dig, has some superseded claims): `Nothing-x-open/re/control-and-smart-dial.md`.
 
-## 1. End-to-end data flow
+## 1. Model / capability gating
 
-```
-UI tap (ControlCaseOperationActivity.onSelectedOperation)
-  → ControlViewModel.setGestureData(viewModel, dialogItemViewModel)      espeon/control/ControlViewModel.java:485-571
-  → EspeonSppProtocol.setGestureData(op, newOperation, button)          ControlViewModel$setGestureData$1$1 (await l=151,156)
-  → TWSDeviceExtKt.keyConfiguration(twsDevice) → TWSDeviceBuilder.sendMessage
-        frame: 0xF003 SET_KEY_CONFIGURATION, payload = ControlConfigurationEntity.obtainDataPacket()
-```
+`IOTProductDevice.supportSmartDial()`:
 
-Read-back:
-
-```
-0xC018 GET_KEY_CONFIGURATION response
-  → ControlConfigurationEntity(byte[])  parse via DataExtKt.toMultiValues(payload, 1,1,1,1,1)
-  → espeon ControlViewModel.listenerLiveData:                                   ControlViewModel.java:282-399
-      * extracts button==9 ops as "call gestures" (answer/decline channel)        :285
-      * renders only ops whose gesture ∈ SUPPORT_GESTURES                        :341
-      * device==4 ops paired with a same-gesture call op → call-paired item      :349-374
-      * addGestureList dispatches to left/right/case lists                       :398
-```
-
-## 2. Packet layout (source-confirmed)
-
-`ControlConfigurationEntity.obtainDataPacket()` (earbase/control/entity/ControlConfigurationEntity.java:183-194):
-
-```
-[ count, (device, button, gesture, operation) × count ]
-  count = operations.size(), 1 byte; then 4 bytes per slot.
-```
-
-App-internal device codes (source-verified):
-- `2` = left bud, `3` = right bud, `4` = case/dial.
-  - `ControlItemViewModel.convertOptions`: `device == 2` → left, `device == 3` → right,
-    `device == 4` → `isCase()` (espeon/control/ControlItemViewModel.java:216-232).
-  - Lock item is created as `new Operation(4, 1, 15, 40)` — device 4 = case (espeon ControlViewModel.java:856-858).
-  - Read-back pairing of call gestures matches `operation.getDevice() == 4` (espeon ControlViewModel.java:349).
-
-> Correction: earlier notes/README claimed "1=case". In this current artifact the case device
-> code is definitively **4**. The `1=case` claim in Nothing-x-open/re/control-and-smart-dial.md
-> predates this reading and needs re-check against its source.
-
-## 3. Per-model supported triggers — `SUPPORT_GESTURES` (read-back render filter)
-
-Constant `private static final int[] SUPPORT_GESTURES` in each model's `control/ControlViewModel`:
-
-| model (product) | SUPPORT_GESTURES | file:line |
+| model / SKU | supportSmartDial() | source |
 |---|---|---|
-| Espeon (CMF Buds Pro 2, B172) | `{1, 2, 3, 7, 9, 10, 15}` | espeon/…/ControlViewModel.java:63 |
-| Gligar (24241) | `{1, 2, 3, 7, 9, 10, 15}` | gligar/…/ControlViewModel.java:63 |
-| Girafarig (24232) | `{1, 2, 3, 7, 9, 10, 15}` | girafarig/…/ControlViewModel.java:63 |
-| Corsola (Buds Pro, B163) | `{1, 2, 3, 7, 8, 9}` | corsola/…/ControlViewModel.java:63 |
-| Donphan (Buds, B168) | `{2, 3, 7, 9}` | donphan/…/ControlViewModel.java:63 |
-| Elekid (Headphone (1), B170) | `{1, 7}` | elekid/…/ControlViewModel.java:63 |
-| Crobat (Neckband Pro, B164) | `{2, 3, 7}` | crobat/…/ControlViewModel.java:63 |
+| base (all others) | `false` | ear/base `IOTProductDevice.java:199-201` |
+| Espeon — CMF Buds Pro 2, B172 (project 23272, release order 3) | `true` | `espeon/core/device/IOTProductDeviceEspeon.java:64-66` |
+| Heracross — "24253" | `true` (reuses Espeon action/gesture/protocol classes) | `heracross/device/IOTProductDeviceHeracross.java:72-74` |
 
-Notes:
-- This filter applies to both bud and case slots returned by 0xC018 (it is gesture-type-only).
-- The older reference table (earbuds `0/2/3/7/8/9/15`) included slide (0) and 8 for espeon;
-  the current artifact's filters contain **no 0** and, for espeon, **9** (not 8). Use the table above.
+- Espeon is the only model with the full case-dial UI.
+- `SmartDialUtil.checkSmartDial(address)` drives the one-time "smart dial tips" notice only
+  (`DeviceItem.smartDialTips` in the app DB); callers: `com.nothing.crobat.control.ControlViewModel`
+  and `SmartDialUtil` itself. No firmware/version/region gating for the dial was found.
+- Nothing-x-open ref table claimed Buds Pro (Corsola) earbuds include a "slide" (0) gesture; this
+  current artifact shows **no model's `SUPPORT_GESTURES` contains 0**.
 
-## 4. Case gesture definitions — `caseGestures` (id → name/lottie/icon)
+## 2. Per-model supported triggers — `SUPPORT_GESTURES`
 
-`IOTEarEspeonGestureAction.java:26` (line 26 is too long for the tool; content verified):
+Constant `private static final int[] SUPPORT_GESTURES` in each model's `control/ControlViewModel` line 63 —
+the read-back **render filter** (only ops whose gesture type is in the set are shown):
 
-| id | R.string | lottie (highlight) | icon |
+| model (product / id) | SUPPORT_GESTURES |
+|---|---|
+| Espeon (Buds Pro 2, B172) | `{1, 2, 3, 7, 9, 10, 15}` |
+| Gligar (24241) | `{1, 2, 3, 7, 9, 10, 15}` |
+| Girafarig (24232) | `{1, 2, 3, 7, 9, 10, 15}` |
+| Corsola (Buds Pro, B163) | `{1, 2, 3, 7, 8, 9}` |
+| Donphan (Buds, B168) | `{2, 3, 7, 9}` |
+| Elekid (Headphone (1), B170) | `{1, 7}` |
+| Crobat (Neckband Pro, B164) | `{2, 3, 7}` |
+
+This filter is gesture-type-only (applies to bud and case slots alike).
+
+## 3. Case gesture (trigger) IDs — `caseGestures`
+
+Defined in `IOTEarEspeonGestureAction.java:26` (gligar twin identical with `gligar_*` assets).
+
+| id | UI name (R.string) | lottie (animation) | icons |
 |---|---|---|---|
 | 1 | `single_press` | `lottie/espeon_single_case.json` | control_ic_index_one |
-| 2 | `double_press` | `lottie/espeon_double_case.json` | control_ic_index_two / _two_sub |
-| 3 | `triple_press` | `lottie/espeon_triple_case.json` | control_ic_index_three / _three_sub |
+| 2 | `double_press` | `lottie/espeon_double_case.json` | control_ic_index_two(_sub) |
+| 3 | `triple_press` | `lottie/espeon_triple_case.json` | control_ic_index_three(_sub) |
 | 7 | `press_hold` | `lottie/espeon_press_hold_case.json` | control_ic_index_tap_hold |
 | 10 | `rotate` | `lottie/espeon_rotate_case.json` | control_ic_rotate |
-| 15 | `double_press_hold` | `""` (empty) | control_ic_index_double_tap_hold |
+| 15 | `double_press_hold` | (empty) | control_ic_index_double_tap_hold |
 
-Gligar's list is identical modulo the `gligar_*` asset names (gligar/…/IOTEarGligarGestureAction.java:26);
-`createOrangeGesture()` returns this list (companion `createOrangeGesture`/`getCaseGestures`, line 43).
+`createOrangeGesture()` returns this list (companion, line 43). Ear-side gestures live in the same
+files; the case gesture IDs are the six values above.
 
-## 5. Operation (action) id → name (source-verified switches)
+## 4. Operation (action) IDs → user-facing strings (source-verified)
 
-Resolved in `ControlItemViewModel`/`ControlOperationViewModel` (`operationName` / `getOperationName`):
+Resolved in model `ControlItemViewModel.getGestureOperation()` (verified girafarig switch,
+lines 260-344; espeon/nothing-x-open refs agree):
 
-| id | action | verified at |
+| id | action | string source |
 |---|---|---|
-| 1 | No action | espeon case lists (default) |
-| 2 | Play / pause | girafarig ControlItemViewModel (control_skip…) switch |
-| 6 | Volume up | girafarig switch `R.string.volume_up` |
-| 7 | Volume down | girafarig switch `R.string.volume_down` |
-| 8 | Skip back | girafarig switch `R.string.control_skip_back` |
-| 9 | Skip forward | girafarig switch `R.string.control_skip_forward` |
-| 10 | ANC / noise-control | girafarig switch `ancNoiseControl(context)` |
-| 11 | Voice assistant | girafarig switch `voice_ai_title` (GPT-aware), else voice-assistant string |
-| 20 / 21 / 22 | Noise sub-modes (ANC/transparency/off) | espeon `convertAnc` disposal, ControlViewModel.java:844 |
-| 40 | Case lock / unlock tips | girafarig switch `R.string.lock_unlock_tips` + `R.string.knob` |
-| 255 | reserved/internal | girafarig switch special-case |
-| (flow) | `switch_bluetooth_connection` string exists in the same switch family | girafarig ControlItemViewModel |
+| 1 | No action | case-list defaults |
+| 2 | Play / pause | func helper |
+| 3 | Answer call | call case list |
+| 6 / 18 | Volume up | `volumeUp(context)` helper |
+| 7 / 19 | Volume down | `volumeDown(context)` helper |
+| 8 | Skip back | `R.string.control_skip_back` |
+| 9 | Skip forward | `R.string.control_skip_forward` |
+| 10 | ANC / noise-control | `ancNoiseControl(context)` |
+| 11 | Voice assistant | `voice_ai_title` (GPT) else `control_voice_assistant` |
+| 17 | Game mode | `R.string.case_game_model` |
+| 20 / 21 / 22 | Noise sub-modes (ANC/transparency/off) | `ancNoiseControl` |
+| 23 | **Volume control (dial)** | `volumeControl(context)` helper |
+| 24 | Pairing mode | `R.string.pairing_mode` |
+| 25 | Answer + mute | `R.string.case_answer_call_mute` |
+| 26 | Hand-up / decline call | `R.string.control_hand_up_decline_incoming_calls` |
+| 27 | Spatial audio | literal "Spatial audio" |
+| 28 | Bass enhancement | literal "Bass enhancement" |
+| 29 | Mic mute | literal "Mic mute" |
+| 31 | AI news | `R.string.ai_news` |
+| 32 | Nothing radio | literal "Nothing radio" |
+| 39 | Switch BT connection | `R.string.switch_bluetooth_connection` |
+| 40 | Case lock / unlock tips | `R.string.lock_unlock_tips` + `R.string.knob` |
+| 255 (0xFF) | **Volume control** label | `volumeControl(context)` (girafarig `if (op != 255)` else return) |
 
-Espeon earbud operation lists (companion arrays, earlier session):
+> Correction vs Nothing-x-open table: op **255 is NOT "info/internal"** — it resolves to the
+> volume-control string here. ops 51 reserved is not in this switch.
 
-- double/triple tap: `SUPPORT_OPERATIONS {8, 9, 11}`
-- noise slots: `SUPPORT_OPERATIONS_NO_CLOSE {22, 11}`
-- press & hold: `SUPPORT_OPERATIONS_LONG_PRESS {18, 19, 11}`
-- double-tap extra: `SUPPORT_DOUBLE_OPERATIONS {2, 8, 9, 11}`
+## 5. Espeon case-dial assignment whitelists — `CASE_SUPPORT_*`
 
-## 6. Espeon case-dial assignment — allowed operations per slot
+Constant arrays in espeon `ControlItemViewModel.java:38-42`:
 
-From espeon `ControlItemViewModel` case helpers (`caseSinglePressGesture` 401-…, `casePressHoldGesture` 430-…,
-`caseDoublePressGesture` 334-…, `caseTriplePress` 236-…, rotate via `caseOperationList`):
-
-| case slot (gesture id) | allowed operations (op, order) |
+| constant | allowed operations |
 |---|---|
-| 1 single press | {2, 9, 8, 11, 17} |
-| 7 press & hold | {22, 11, 17} |
-| 2 double press (call) | {3, 25, 1} |
-| 3 triple press (call) | {26, 1} |
-| 10 rotate (smart dial) | {23 volume control, 1 no action}, default = 1 |
-| 15 double-press-hold | lock item (op 40) |
+| `CASE_SUPPORT_SINGLE_PRESS` | `{2, 9, 8, 11, 17}` |
+| `CASE_SUPPORT_PRESS_HOLD` | `{22, 11, 17}` |
+| `CASE_SUPPORT_DOUBLE_PRESS_CALL` | `{3, 25, 1}` |
+| `CASE_SUPPORT_TRIPLE_PRESS_CALL` | `{26, 1}` |
+| `CASE_SUPPORT_ROTATE` | `{23, 1}` |
 
-- Rotate render: `caseOperationList(23, …)` first → HEAD, then `1` → END
-  (espeon ControlItemViewModel rotate dispatch, ControlViewModel.java:190-191 path).
-- `addLockCustomisable()` appends `Operation(4, 1, 15, 40)` (`lock_unlock_tips`) as a non-customisable row (espeon ControlViewModel.java:856-858).
+Earbud arrays (same file:34-37): `SUPPORT_OPERATIONS {8,9,11}`, `SUPPORT_OPERATIONS_NO_CLOSE {22,11}`,
+`SUPPORT_OPERATIONS_LONG_PRESS {18,19,11}`, `SUPPORT_DOUBLE_OPERATIONS {2,8,9,11}`.
 
-## 7. ANC / noise-control special-casing
+- Rotate rendering (`convertOptions`, gesture 10): iterate `CASE_SUPPORT_ROTATE`, first item gets
+  `ControlRadius.HEAD`, last `END`, else NONE; then `setDefaultOperation(1)` (espeon ControlItemViewModel.java:178-195).
+- Case double/triple/call wiring and lock row (op 40, gesture 15): see espeon ControlItemViewModel case helpers.
+- Lock item appended as `addLockCustomisable()` → `new Operation(4, 1, 15, 40)` (espeon ControlViewModel.java:856-858).
 
-- Selection ops 10/20/22/21 go through `convertAnc(defaultOperation, true)`; other ops set
-  `noiseControlVisible=false` (espeon ControlViewModel.java:841-849).
-- UI handlers `onClickNoiseCancellation/onClickTransparency/onClickOff`
-  → `setAncGestureData(viewModel, value, dialogItemViewModel)` (espeon/ControlCaseOperationActivity.java:223-260;
-  espeon ControlViewModel.java:596-604, launch + jadx-skipped `syncAncGestureData` at 623-629).
-- Sub-mode translation `dialogItemViewModel.toTransparency()/toNoiseCancellation()/toOff()`;
-  a slot marked as a noise operation is re-stamped with the noise sub-op at write (`setGestureData`
-  noise check, espeon ControlViewModel.java:545-546, 576-594).
+## 6. UI → configuration → wire (CONFIRMED, the full chain)
 
-## 8. Smart-dial gating
+```
+Control UI:
+  ControlCaseOperationActivity.onSelectedOperation(dialog, item)      espeon/ControlCaseOperationActivity.java:141-151
+    → ControlViewModel.setGestureData(viewModel, dialogItem)          espeon/ControlViewModel.java:485-571
+      → ControlViewModel$setGestureData$1$1.invokeSuspend:
+            syncGestureData(dialog, op, viewModel)                    (Ctrl Vm kt l=151)
+            button = dialog.getButton() ?: op.getButton()
+            EspeonSppProtocol.setGestureData(op, newOp, button)       (l=156, returns Boolean)
+            on true: setVisibleOrGoneNoiseSubItems + onClickSelectedOperation (UI refresh)
+      → (EspeonSppProtocol body not in artifact — see Gaps)
+        earbase layer (PROVEN):
+          DeviceProtocol.setGestureData(bundle, operation, newOp, cont)   ear/base/os/DeviceProtocol.java:115-125
+            payload = ByteBuffer.allocate(5):
+              01  device  button  gesture  newOperation                (count=1, then 4 bytes)
+            TWSDevice.syncSet(twsDevice, 0xF003 SET_KEY_CONFIGURATION, payload, ...)
+```
 
-- `IOTProductDevice.supportSmartDial()` = `false` (earbase/…/IOTProductDevice.java:199-201).
-- Overridden `true` only for **Espeon (B172)** (`IOTProductDeviceEspeon.java:64-66`, productId B172/project 23272,
-  Buds Pro 2) and **Heracross** (`IOTProductDeviceHeracross.java:72-74`, device "24253"; reuses
-  IOTEspeonAction / IOTEarEspeonGestureAction / EspeonProtocol). Espeon is the only one with full dial UI.
-- `SmartDialUtil.checkSmartDial(address)` = one-time "smart dial tips" notice, DB-gated per device
-  (DeviceItem.smartDialTips); callers: `com.nothing.crobat.control.ControlViewModel`, SmartDialUtil itself.
+ANC variant (`setAncGestureData`, used by Noise-cancellation/Transparency/Off rows):
 
-## 9. Call-channel (button == 9)
+```
+ControlCaseOperationActivity.onClickNoiseCancellation/Transparency/Off   :223-260
+  → ControlViewModel.setAncGestureData(viewModel, value, dialog)        ControlViewModel.java:596-604
+    → ControlViewModel$setAncGestureData$1$1:
+          syncAncGestureData(...)                                       (kt l=246)
+          BaseSppProtocol.setGestureData$default(op, newOp, <defaulted>, cont)  (kt l=248) — espeon/ControlViewModel$setAncGestureData$1$1.java:64
+          on true: op.setOperation; dialog.setOperation; convertAnc(newOp,false)
+```
 
-When read-back contains an op with `button == 9`, it is pulled out as a call-assignment
-(`getCallOperation`) and applied to the matching case slot (espeon ControlViewModel.java:283-287, 349-374;
-UI pairing in `caseDoublePressGesture`/`caseTriplePress`). On write, a paired `callOperation` is
-re-serialized to the same slot (espeon ControlViewModel.java:789-794).
+Reset (reset-all button):
 
-## 10. Gaps
+```
+ControlViewModel.resetGestureData()                                     ControlViewModel.java:631-638
+  → resetLeftGestureData + resetRightGestureData + resetCallGestureData (build Operation list,
+        each slot set to its defaultOperation; case lock(op40)/call rows pruned)  :759-857
+  → ControlViewModel$resetGestureData$1:
+        EspeonSppProtocol.resetGestureData(operations)                 (kt l=305-306)
+```
 
-- `EspeonSppProtocol` and `EspeonProtocol` class files are **not present** in the control-src artifact,
-  though referenced (`setGestureData` from `ControlViewModel$setGestureData$1$1`, `setProtocol(new
-  EspeonProtocol())` from the device constructors). The exact 0xF003 write/read bodies cannot be read
-  here; the packet framing is anchored via `ControlConfigurationEntity.obtainDataPacket()` + the
-  verified 0xC018/0xF003/0xC009 constants in `ProtocolConstant.java`.
-- `DataExtKt.toMultiValues` (read-back parser) is not in this artifact either — its semantics are
-  inferred to mirror `obtainDataPacket` (count + 4-byte slots) but not directly verified.
-- `BaseSppProtocol` method bodies (generic write helpers) opened but not yet fully read.
+## 7. Configuration → wire details (CONFIRMED)
+
+- Command IDs (ProtocolConstant, `KEY_CONFIGURATION` renamed `GET_ln`/`SET_ln` by the decompiler):
+  - **Query `GET_KEY_CONFIGURATION = 0xC018 (49176)`**
+  - **Set `SET_KEY_CONFIGURATION  = 0xF003 (61443)`**
+- `TWSDeviceExtKt.keyConfiguration(twsDevice)` wires the builder: `getCommand(0xC018)` + `setCommand(0xF003)`
+  (com/nothing/core/ext/TWSDeviceExtKt.java:546-552). Used by `ControlViewModel.listenerLiveData`.
+- Payload builder (all sources agree, `1 + 4N` bytes):
+  - single-slot set: `[0x01, device, button, gesture, operation]` — `DeviceProtocol.setGestureData` (ear/base/os/DeviceProtocol.java:115-125).
+  - full set/reset: `ControlConfigurationEntity.obtainDataPacket()` = `[count, (device, button, gesture, operation) × count]`
+    (earbase/control/entity/ControlConfigurationEntity.java:183-194).
+- Byte order: single-byte fields, `ByteBuffer` default big-endian irrelevant; no multi-byte fields.
+  All fields ≤ 255, `put((byte) value)`.
+- Device codes on the wire equal the app-internal codes (no translation):
+  **2 = left bud, 3 = right bud, 4 = case/dial**
+  (`ControlItemViewModel.convertOptions`, espeon ControlItemViewModel.java:216-232; lock op `Operation(4,1,15,40)`; read-back pairing `getDevice()==4`).
+- No case-BLE involvement: smart-dial config travels over the main earbud SPP link (`TWSDevice.syncSet`)
+  like every other control. Case-BLE (`NtCaseBleApi`/`XCaseBleConnector`, `case-src/`) is used for box LEDs,
+  wake, OTA — not for key-config.
+- After a save the case UI displays "case restarts to apply" (dialog/UX); the ear relays the config to the case
+  over the ear↔case link — relay firmware behavior is outside this artifact (UNKNOWN).
+
+## 8. Read-back (CONFIRMED at app layer)
+
+```
+ControlViewModel.register(extras)                                      espeon/ControlViewModel.java:129-134
+  protocol = new EspeonSppProtocol(address)
+  listenerLiveData()                                                   :136-220
+  getGestureData(false)  →  BaseControlViewModel.getGestureData triggers the 0xC018 query
+
+listenerLiveData():
+  keyConfiguration(twsDevice)  →  command-cache LiveData
+  Transformations.map(getLiveDataCommand(getCommand=0xC018, notifyCommand), …)
+      message.getPayload()  →  new ControlConfigurationEntity(byte[])   (reflective ctor)  :144-186
+  distinctUntilChanged → observe → listenerLiveData$lambda$11           :226+
+      splits ops into left / right / case lists:
+        - pulls button==9 ops as call-channel                         :285
+        - renders only gestures ∈ SUPPORT_GESTURES                     :341
+        - case (device==4) op paired with same-gesture call op         :349-374
+  → ControlActivity / ControlCaseOperationActivity lists
+```
+
+App-side `getGestureData` actually sends `sendCommands([0xC018])` via `TWSDevice`
+(ear/base/os/DeviceProtocol.java:107-113), and the reply payload is parsed in `ControlConfigurationEntity(byte[])`
+using `DataExtKt.toMultiValues(payload, 1,1,1,1,1)` (see Gaps).
+
+## 9. Default configuration
+
+- **No proactive default write**: on connect/enter the page the app only issues `0xC018` (read),
+  then renders what the device returns (`register` → `getGestureData(false)`).
+- The app's only "write defaults" path is the reset-all button (§6), which re-stamps selected slots
+  with each slot's `defaultOperation`:
+  - case single / double / triple / rotate: default = **1 (no action)** (espeon ControlItemViewModel.java:195, 361, 402, 431)
+  - ear double tap: default 9; ear triple tap: default 8; long-press: default 22; call rows per whitelist.
+  - reset rewrites `copy$default(op,0,0,0,0,15).setOperation(defaultOperation)` preserving device/button/gesture.
+- Firmware factory defaults for rotation when the app never writes are therefore **device-defined, not
+  app-defined** (UNKNOWN; likely `1` no-action given the app's own default).
+
+## 10. Which case gestures are "real configurable" vs framework-only
+
+Source-defined, per-model control availability is a combination of:
+
+1. `supportSmartDial()` (Espeon B172 only + Heracross) → tips + dial UX + lock row;
+2. `SUPPORT_GESTURES` membership → whether that trigger type is even rendered from read-back;
+3. presence of the model's `ControlItemViewModel` case builders (`CASE_SUPPORT_*` handling —
+   only espeon has the full case op-list construction; girafarig renders only ear gestures
+   2/3/7/8/9 and its case rows fall back to the base `ControlGestureViewModel`);
+4. firmware actually returning slots (observed at read-back).
+
+Result: on Espeon, case slots **1 (single), 2 (double), 3 (triple), 7 (press & hold), 10 (rotate),
+15 (double press & hold / lock)** are all real, configurable controls on the main key-config channel.
+Models without the espeon case builders only show framework rows (no dial).
+
+## 11. Validation checklist (§13 of the task)
+
+- Numeric IDs cross-checked ≥1 source each — see tables above (file:line cited).
+- Operation-ID reuse: **10 vs 20/21/22** (noise-control family) collapse to the same UI string;
+  **6/7 vs 18/19** (volume up/down) are alias pairs; **23 vs 255** both render "Volume control".
+  These are the only collisions found.
+- Endianness: single-byte fields only; none >255 sent. No endianness hazard.
+- Signedness: write uses `put((byte) op)`; ops up to 255 → 0xFF. On read-back, `DataExtKt`
+  unsigned vs signed conversion is **not visible in the artifact** (UNKNOWN). op 255 compare
+  depends on it.
+- Packet length: `1+4N` (single set = 5 bytes) — confirmed by `ByteBuffer.allocate(5)` and `allocate((size*4)+1)`.
+- CRC/checksum: none inside the payload; encoding of TWSDevice frames (any checksum/seq) lives in
+  `com.nothing.protocol.*` which is not in this artifact — **UNKNOWN**.
+- Value translation before send: YES — ANC rows write the resolved sub-op (0/20/21/22) via
+  `setAncGestureData`/`convertAnc`; call rows + lock handled separately; otherwise op is sent raw.
+- Separate case protocol for smart dial: NO — same 0xF003 key-config channel as buds.
+
+## 12. Gaps (UNKNOWN / unverifiable from this artifact)
+
+- `EspeonSppProtocol` / `EspeonProtocol` class bodies absent (imported; `setGestureData` /
+  `resetGestureData` signatures recovered from callers). The earbase layer they sit on is fully proven
+  (`DeviceProtocol`, `TWSDeviceExtKt.keyConfiguration`), so the missing hop is thin.
+- `DataExtKt.toMultiValues` / `toInt` bodies absent → read-back signedness unproven.
+- `TWSDevice.syncSet/sendCommands/sendMessage` and transport framing internals absent
+  (`com.nothing.protocol.*`) → physical link + any framing checksum unproven (SPP by construction).
+- Ear↔case relay behavior after 0xF003 ("case reboots") is firmware — not in app code.
+- `BaseSppProtocol` used by the ANC path; its body is also absent (only @Metadata).
+
+## 13. Source index (key files)
+
+- `control-src/com/nothing/espeon/control/ControlViewModel.java` — SUPPORT_GESTURES:63; register:129; listenerLiveData:136; read-back split:226-399; setGestureData:485; setAncGestureData:596; reset:631, 759-854; addLockCustomisable:856.
+- `control-src/com/nothing/espeon/control/ControlItemViewModel.java` — earbud/case arrays:34-42; convertOptions device codes:216-232; rotate:178-195; case helpers + defaults.
+- `control-src/com/nothing/espeon/control/ControlCaseOperationActivity.java` — UI entry:141; ANC:223-260.
+- `control-src/com/nothing/espeon/control/ControlViewModel$setGestureData$1$1.java` — save hop.
+- `control-src/com/nothing/earbase/os/DeviceProtocol.java:107-125` — 0xC018 query + 5-byte 0xF003 set payload.
+- `control-src/com/nothing/core/ext/TWSDeviceExtKt.java:546-552` — keyConfiguration builder.
+- `control-src/com/nothing/earbase/control/entity/ControlConfigurationEntity.java:183-194` — obtainDataPacket.
+- `control-src/com/nothing/{espeon,gligar}/core/device/IOTEar*GestureAction.java:26,43` — caseGestures.
+- `control-src/com/nothing/girafarig/control/ControlItemViewModel.java:260-344` — op→string switch.
+- `control-src/com/nothing/base/protocol/constant/ProtocolConstant.java` — GET_ln=49176 (0xC018), SET_ln=61443 (0xF003).
+- `control-src/com/nothing/{espeon,heracross}/core/device/IOTProductDevice*.java` + base — supportSmartDial.
+- `control-src/com/nothing/earbase/control/SmartDialUtil.java` — tips gate.
