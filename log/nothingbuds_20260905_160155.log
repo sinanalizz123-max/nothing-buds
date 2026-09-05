@@ -1,0 +1,342 @@
+Nothing Buds log export
+time: 2026-09-05 16:01:55
+app version: 1.0.0
+android: 17 (SDK 37, Google Pixel 7)
+earbuds: CMF Buds Pro 2 3C:B0:ED:DC:05:C7 model=B172 connected=true fw=0.0.8.8
+battery: BatteryStatus(left=100, right=100, case=-1, leftCharging=false, rightCharging=false, caseCharging=false)
+anc=OFF, eq=BALANCED, dirac=1, customEq=0,0,0,0,0,0,0,0
+bass=false/level=0, spatial=true, lhdc=false, dual=true
+lowLatency=false, inEar=true, powerOff=0min
+prefs: {last_detail_enhancement_level=1, last_eq_preset=0, last_in_ear=true, last_anc_mode=0, last_detail_enhancement=true, last_device_name=CMF Buds Pro 2, last_device_model_id=B172, last_low_latency=false, last_enhanced_bass=false, last_battery_right=100, last_dirac_eq=1, last_battery_left=100, last_lhdc=false, last_device_address=3C:B0:ED:DC:05:C7, last_battery_case=-1, last_auto_power_off=0, last_dual=true}
+
+--- logcat ---
+09-05 13:03:46.122  5044  5044 E AndroidRuntime: Process: com.nothingbuds, PID: 5044
+09-05 13:03:46.122  5044  5044 E AndroidRuntime: android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException: Context.startForegroundService() did not then call Service.startForeground(): ServiceRecord{193b9ab u0 com.nothingbuds/.service.BudsService c:com.nothingbuds}
+09-05 13:03:46.122  5044  5044 E AndroidRuntime: 	at com.nothingbuds.service.BluetoothConnectionReceiver.onReceive(BluetoothConnectionReceiver.kt:44)
+09-05 13:20:22.065  9037  9037 E AndroidRuntime: Process: com.nothingbuds, PID: 9037
+09-05 13:20:22.065  9037  9037 E AndroidRuntime: android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException: Context.startForegroundService() did not then call Service.startForeground(): ServiceRecord{7cd3f8e u0 com.nothingbuds/.service.BudsService c:com.nothingbuds}
+09-05 13:20:22.065  9037  9037 E AndroidRuntime: 	at com.nothingbuds.service.BluetoothConnectionReceiver.onReceive(BluetoothConnectionReceiver.kt:44)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: Process: com.nothingbuds, PID: 2327
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.service.BudsService.hexToBytes(BudsService.kt:1206)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.service.BudsService.setConnectDevice(BudsService.kt:964)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.ui.MainActivity.onCreate$lambda$72$lambda$71$lambda$70$lambda$69$lambda$68$lambda$62$lambda$51$lambda$50(MainActivity.kt:160)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.ui.MainActivity$$ExternalSyntheticLambda28.invoke(D8$$SyntheticClass:0)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.ui.screens.ExtrasScreenKt.ExtrasScreen$lambda$37$lambda$36$lambda$11$lambda$10$lambda$7$lambda$6(ExtrasScreen.kt:160)
+09-05 14:04:12.796  2327  2327 E AndroidRuntime: 	at com.nothingbuds.ui.screens.ExtrasScreenKt$$ExternalSyntheticLambda3.invoke(D8$$SyntheticClass:0)
+09-05 14:05:54.402  2780  2780 E AndroidRuntime: Process: com.nothingbuds, PID: 2780
+09-05 14:05:54.402  2780  2780 E AndroidRuntime: android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException: Context.startForegroundService() did not then call Service.startForeground(): ServiceRecord{a2af396 u0 com.nothingbuds/.service.BudsService c:com.nothingbuds}
+09-05 14:05:54.402  2780  2780 E AndroidRuntime: 	at com.nothingbuds.service.BluetoothConnectionReceiver.onReceive(BluetoothConnectionReceiver.kt:44)
+09-05 14:06:38.001  3397  3397 E AndroidRuntime: Process: com.nothingbuds, PID: 3397
+09-05 14:06:38.001  3397  3397 E AndroidRuntime: android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException: Context.startForegroundService() did not then call Service.startForeground(): ServiceRecord{108d10f u0 com.nothingbuds/.service.BudsService c:com.nothingbuds}
+09-05 14:06:38.001  3397  3397 E AndroidRuntime: 	at com.nothingbuds.service.BluetoothConnectionReceiver.onReceive(BluetoothConnectionReceiver.kt:44)
+09-05 14:34:42.690 12610 12610 E AndroidRuntime: Process: com.nothingbuds, PID: 12610
+09-05 14:34:42.690 12610 12610 E AndroidRuntime: android.app.RemoteServiceException$ForegroundServiceDidNotStartInTimeException: Context.startForegroundService() did not then call Service.startForeground(): ServiceRecord{a44ac12 u0 com.nothingbuds/.service.BudsService c:com.nothingbuds}
+09-05 14:34:42.690 12610 12610 E AndroidRuntime: 	at com.nothingbuds.service.BluetoothConnectionReceiver.onReceive(BluetoothConnectionReceiver.kt:44)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: Process: com.nothingbuds, PID: 24298
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.service.BudsService.hexToBytes(BudsService.kt:1291)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.service.BudsService.setConnectDevice(BudsService.kt:1039)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.ui.MainActivity.onCreate$lambda$73$lambda$72$lambda$71$lambda$70$lambda$69$lambda$63$lambda$52$lambda$51(MainActivity.kt:164)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.ui.MainActivity$$ExternalSyntheticLambda13.invoke(D8$$SyntheticClass:0)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.ui.screens.ExtrasScreenKt.ExtrasScreen$lambda$38$lambda$37$lambda$12$lambda$11$lambda$8$lambda$7(ExtrasScreen.kt:180)
+09-05 15:05:30.921 24298 24298 E AndroidRuntime: 	at com.nothingbuds.ui.screens.ExtrasScreenKt$$ExternalSyntheticLambda12.invoke(D8$$SyntheticClass:0)
+09-05 15:59:28.590 16011 16011 D ActivityThread: Set OS env TMPDIR to /data/user/0/com.nothingbuds/cache
+09-05 15:59:29.622 16011 16011 I ImeTracker: com.nothingbuds:041d087a: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 15:59:58.190 16011 16011 I ImeTracker: com.nothingbuds:233cf3ff: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 15:59:58.907 16011 16076 D BudsService: Received 17 bytes
+09-05 15:59:58.908 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038102810401
+09-05 15:59:58.908 16011 16076 D BudsService: Unhandled response 0xe002: 03038102810401
+09-05 15:59:59.408 16011 16076 D BudsService: Received 17 bytes
+09-05 15:59:59.409 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 15:59:59.409 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:02.412 16011 16211 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:03.910 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:03.911 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030102010401
+09-05 16:00:03.912 16011 16076 D BudsService: Unhandled response 0xe002: 03030102010401
+09-05 16:00:04.408 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:04.410 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:04.410 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:07.414 16011 16210 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:08.912 16011 16076 D BudsService: Received 34 bytes
+09-05 16:00:08.915 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038102810401
+09-05 16:00:08.916 16011 16076 D BudsService: Unhandled response 0xe002: 03038102810401
+09-05 16:00:08.918 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:08.918 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:11.924 16011 16210 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:13.410 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:13.411 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030102010401
+09-05 16:00:13.412 16011 16076 D BudsService: Unhandled response 0xe002: 03030102010401
+09-05 16:00:13.912 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:13.914 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:13.915 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:15.017 16011 16011 I ImeTracker: com.nothingbuds:101736d4: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:16.927 16011 16210 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:17.754 16011 16210 D BudsService: Polling status...
+09-05 16:00:17.755 16011 16211 D BudsService: Sending: 55600107c0000025acc4
+09-05 16:00:17.923 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:17.924 16011 16076 D BudsService: Parsed response - command: 0x4007, payload: 03026403640441
+09-05 16:00:17.924 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:17.960 16011 16210 D BudsService: Sending: 5560011ec0000026f107
+09-05 16:00:18.011 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:18.012 16011 16076 D BudsService: Parsed response - command: 0x401e, payload: 010500020400
+09-05 16:00:18.012 16011 16076 D BudsService: ANC state: mode=OFF, level=ADAPTIVE
+09-05 16:00:18.145 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:18.149 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038102810401
+09-05 16:00:18.152 16011 16076 D BudsService: Unhandled response 0xe002: 03038102810401
+09-05 16:00:18.527 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:18.531 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:18.531 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:21.547 16011 16211 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:23.417 16011 16076 D BudsService: Received 34 bytes
+09-05 16:00:23.419 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030102010401
+09-05 16:00:23.421 16011 16076 D BudsService: Unhandled response 0xe002: 03030102010401
+09-05 16:00:23.422 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:23.422 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:25.019 16011 16011 D BudsService: Setting gesture: side=1 type=10 action=10
+09-05 16:00:25.126 16011 16213 D BudsService: Sending: 55600103f00500270101010a0a927a
+09-05 16:00:25.427 16011 16011 I ImeTracker: com.nothingbuds:271e851b: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:25.433 16011 16076 D BudsService: Received 10 bytes
+09-05 16:00:25.433 16011 16076 D BudsService: Parsed response - command: 0x7003, payload: 
+09-05 16:00:25.434 16011 16076 D BudsService: Unhandled response 0x7003: 
+09-05 16:00:27.805 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:27.811 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038102810401
+09-05 16:00:27.813 16011 16076 D BudsService: Unhandled response 0xe002: 03038102810401
+09-05 16:00:28.136 16011 16075 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:28.159 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:28.161 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:28.161 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:29.082 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:29.086 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038102820401
+09-05 16:00:29.088 16011 16076 D BudsService: Unhandled response 0xe002: 03038102820401
+09-05 16:00:29.535 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:29.541 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 03026403640441
+09-05 16:00:29.541 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=65%
+09-05 16:00:29.863 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:29.864 16011 16076 D BudsService: Parsed response - command: 0xe003, payload: 010100020400
+09-05 16:00:29.864 16011 16076 D BudsService: ANC state: mode=HIGH, level=ADAPTIVE
+09-05 16:00:31.916 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:31.917 16011 16076 D BudsService: Parsed response - command: 0xe003, payload: 010400020400
+09-05 16:00:31.917 16011 16076 D BudsService: ANC state: mode=ADAPTIVE, level=ADAPTIVE
+09-05 16:00:31.933 16011 16076 D BudsService: Received 32 bytes
+09-05 16:00:31.934 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:00:31.934 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:00:31.934 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:00:31.934 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:32.916 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:32.919 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:00:32.920 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:00:33.416 16011 16076 D BudsService: Received 15 bytes
+09-05 16:00:33.417 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:00:33.417 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:36.428 16011 16075 D BudsService: State saved: ANC=ADAPTIVE, EQ=BALANCED
+09-05 16:00:38.127 16011 16011 I ImeTracker: com.nothingbuds:55611398: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:39.890 16011 16011 D BudsService: Setting gesture: side=1 type=10 action=19
+09-05 16:00:39.945 16011 16212 D BudsService: Sending: 55600103f00500280101010a13534f
+09-05 16:00:40.239 16011 16011 I ImeTracker: com.nothingbuds:578e5327: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:40.434 16011 16076 D BudsService: Received 10 bytes
+09-05 16:00:40.434 16011 16076 D BudsService: Parsed response - command: 0x7003, payload: 
+09-05 16:00:40.434 16011 16076 D BudsService: Unhandled response 0x7003: 
+09-05 16:00:42.947 16011 16749 D BudsService: State saved: ANC=ADAPTIVE, EQ=BALANCED
+09-05 16:00:43.726 16011 16011 I ImeTracker: com.nothingbuds:48609562: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:45.797 16011 16011 D BudsService: Setting gesture: side=1 type=1 action=11
+09-05 16:00:45.855 16011 16749 D BudsService: Sending: 55600103f0050029010101010b55a4
+09-05 16:00:45.927 16011 16076 D BudsService: Received 10 bytes
+09-05 16:00:45.927 16011 16076 D BudsService: Parsed response - command: 0x7003, payload: 
+09-05 16:00:45.927 16011 16076 D BudsService: Unhandled response 0x7003: 
+09-05 16:00:46.154 16011 16011 I ImeTracker: com.nothingbuds:8dff4383: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:00:47.758 16011 16209 D BudsService: Polling status...
+09-05 16:00:47.763 16011 16077 D BudsService: Sending: 55600107c000002aecc0
+09-05 16:00:47.891 16011 16076 D BudsService: Received 15 bytes
+09-05 16:00:47.894 16011 16076 D BudsService: Parsed response - command: 0x4007, payload: 0202640364
+09-05 16:00:47.895 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:47.972 16011 16077 D BudsService: Sending: 5560011ec000002b30c2
+09-05 16:00:48.019 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:48.022 16011 16076 D BudsService: Parsed response - command: 0x401e, payload: 010400020400
+09-05 16:00:48.022 16011 16076 D BudsService: ANC state: mode=ADAPTIVE, level=ADAPTIVE
+09-05 16:00:48.413 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:48.414 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:00:48.414 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:00:48.972 16011 16076 D BudsService: Received 15 bytes
+09-05 16:00:48.976 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:00:48.976 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:51.934 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:51.936 16011 16076 D BudsService: Parsed response - command: 0xe003, payload: 010700020400
+09-05 16:00:51.937 16011 16076 D BudsService: ANC state: mode=TRANSPARENCY, level=ADAPTIVE
+09-05 16:00:53.411 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:53.413 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:00:53.415 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:00:53.909 16011 16076 D BudsService: Received 15 bytes
+09-05 16:00:53.911 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:00:53.911 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:55.415 16011 16076 D BudsService: Received 16 bytes
+09-05 16:00:55.418 16011 16076 D BudsService: Parsed response - command: 0xe003, payload: 010500020400
+09-05 16:00:55.419 16011 16076 D BudsService: ANC state: mode=OFF, level=ADAPTIVE
+09-05 16:00:58.412 16011 16076 D BudsService: Received 17 bytes
+09-05 16:00:58.415 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:00:58.417 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:00:58.428 16011 16209 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:00:58.910 16011 16076 D BudsService: Received 15 bytes
+09-05 16:00:58.912 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:00:58.912 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:00:59.636 16011 16031 W com.nothingbuds: Cleared Reference was only reachable from finalizer (only reported once)
+09-05 16:00:59.770 16011 16011 I ImeTracker: com.nothingbuds:bef451e4: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:00.717 16011 16011 D BudsService: Setting gesture: side=1 type=10 action=11
+09-05 16:01:00.775 16011 16209 D BudsService: Sending: 55600103f005002c0101010a0b52c1
+09-05 16:01:00.951 16011 16076 D BudsService: Received 10 bytes
+09-05 16:01:00.952 16011 16076 D BudsService: Parsed response - command: 0x7003, payload: 
+09-05 16:01:00.952 16011 16076 D BudsService: Unhandled response 0x7003: 
+09-05 16:01:01.066 16011 16011 I ImeTracker: com.nothingbuds:6ae7ea29: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:03.219 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:03.222 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:01:03.224 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:01:03.586 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:03.588 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:03.589 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:05.330 16011 16011 I ImeTracker: com.nothingbuds:323383ab: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:06.282 16011 16011 I ImeTracker: com.nothingbuds:bac097b4: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:06.595 16011 16209 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:06.734 16011 16011 I ImeTracker: com.nothingbuds:5c118b67: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:08.417 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:08.419 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:01:08.420 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:01:08.697 16011 16011 I ImeTracker: com.nothingbuds:313cfb17: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+09-05 16:01:08.920 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:08.924 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:08.924 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:11.932 16011 16210 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:13.420 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:13.423 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:01:13.425 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:01:13.916 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:13.918 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:13.918 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:16.923 16011 16210 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:17.763 16011 16210 D BudsService: Polling status...
+09-05 16:01:17.768 16011 16209 D BudsService: Sending: 55600107c000002dad02
+09-05 16:01:17.934 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:17.935 16011 16076 D BudsService: Parsed response - command: 0x4007, payload: 0202640364
+09-05 16:01:17.935 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:17.971 16011 16209 D BudsService: Sending: 5560011ec000002ef0c1
+09-05 16:01:18.016 16011 16076 D BudsService: Received 16 bytes
+09-05 16:01:18.017 16011 16076 D BudsService: Parsed response - command: 0x401e, payload: 010500020400
+09-05 16:01:18.018 16011 16076 D BudsService: ANC state: mode=OFF, level=ADAPTIVE
+09-05 16:01:18.306 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:18.307 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:01:18.308 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:01:18.711 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:18.712 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:18.712 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:20.644 16011 16011 D BudsService: Setting detail enhancement: enabled=true level=1
+09-05 16:01:20.648 16011 16077 D BudsService: Sending: 55600169f002002f01016f37
+09-05 16:01:20.691 16011 16076 D BudsService: Received 12 bytes
+09-05 16:01:20.691 16011 16076 D BudsService: Parsed response - command: 0x7069, payload: 0101
+09-05 16:01:20.691 16011 16076 D BudsService: Unhandled response 0x7069: 0101
+09-05 16:01:23.280 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:23.281 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:01:23.281 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:01:23.516 16011 16011 D BudsService: Starting ear-tip fit test
+09-05 16:01:23.518 16011 16077 D BudsService: Sending: 55600114f0010030014876
+09-05 16:01:23.610 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:23.611 16011 16076 D BudsService: Parsed response - command: 0x7014, payload: 00
+09-05 16:01:23.611 16011 16076 D BudsService: Unhandled response 0x7014: 00
+09-05 16:01:23.637 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:23.639 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:23.639 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:24.928 16011 16031 I com.nothingbuds: Background young concurrent mark compact GC freed 12MB AllocSpace bytes, 3(72KB) LOS objects, 97% free, 7442KB/256MB, paused 147us,3.646ms total 110.427ms
+09-05 16:01:26.650 16011 16077 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:28.077 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:28.081 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:01:28.084 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:01:28.472 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:28.473 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:28.473 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:31.487 16011 16077 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:32.921 16011 16076 D BudsService: Received 12 bytes
+09-05 16:01:32.922 16011 16076 D BudsService: Parsed response - command: 0xe00d, payload: 0000
+09-05 16:01:32.923 16011 16076 D BudsService: Ear-tip fit result: left=0 right=0
+09-05 16:01:33.422 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:33.427 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:01:33.428 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:01:33.915 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:33.917 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:33.917 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:36.931 16011 16077 D BudsService: State saved: ANC=OFF, EQ=BALANCED
+09-05 16:01:38.489 16011 16011 D BudsService: Setting low latency: true
+09-05 16:01:38.492 16011 16077 D BudsService: Sending: 55600140f0010031014432
+09-05 16:01:38.958 16011 16076 D BudsService: Received 22 bytes
+09-05 16:01:38.960 16011 16076 D BudsService: Parsed response - command: 0x4041, payload: 01
+09-05 16:01:38.960 16011 16076 D BudsService: Low Latency: true
+09-05 16:01:38.964 16011 16076 D BudsService: Parsed response - command: 0x7040, payload: 01
+09-05 16:01:38.964 16011 16076 D BudsService: Unhandled response 0x7040: 01
+09-05 16:01:39.186 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:39.189 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:01:39.191 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:01:39.795 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:39.797 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:39.797 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:40.614 16011 16011 D BudsService: Setting low latency: false
+09-05 16:01:40.616 16011 16749 D BudsService: Sending: 55600140f00100320204c3
+09-05 16:01:40.720 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:40.721 16011 16076 D BudsService: Parsed response - command: 0x4041, payload: 02
+09-05 16:01:40.721 16011 16076 D BudsService: Low Latency: false
+09-05 16:01:40.724 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:40.724 16011 16076 D BudsService: Parsed response - command: 0x7040, payload: 02
+09-05 16:01:40.725 16011 16076 D BudsService: Unhandled response 0x7040: 02
+09-05 16:01:43.144 16011 16011 D BudsService: Setting EQ preset: CUSTOM
+09-05 16:01:43.146 16011 16075 D BudsService: Sending: 55600110f00100330548c1
+09-05 16:01:43.206 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:43.207 16011 16076 D BudsService: Parsed response - command: 0x7010, payload: 01
+09-05 16:01:43.207 16011 16076 D BudsService: Unhandled response 0x7010: 01
+09-05 16:01:44.080 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:44.082 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03030402040000
+09-05 16:01:44.084 16011 16076 D BudsService: Unhandled response 0xe002: 03030402040000
+09-05 16:01:44.443 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:44.448 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:44.448 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:45.013 16011 16011 D BudsService: Setting Dirac EQ: 1
+09-05 16:01:45.015 16011 16749 D BudsService: Sending: 5560011df0010034014a2f
+09-05 16:01:45.153 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:45.154 16011 16076 D BudsService: Parsed response - command: 0x4050, payload: 01
+09-05 16:01:45.154 16011 16076 D BudsService: Dirac EQ: preset=1
+09-05 16:01:45.158 16011 16076 D BudsService: Received 10 bytes
+09-05 16:01:45.158 16011 16076 D BudsService: Parsed response - command: 0x701d, payload: 
+09-05 16:01:45.158 16011 16076 D BudsService: SET_DIRAC_EQ ack
+09-05 16:01:45.217 16011 16075 D BudsService: Sending: 55600150c0000035d8c4
+09-05 16:01:45.233 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:45.233 16011 16076 D BudsService: Parsed response - command: 0x4050, payload: 01
+09-05 16:01:45.234 16011 16076 D BudsService: Dirac EQ: preset=1
+09-05 16:01:46.394 16011 16011 D BudsService: Setting EQ preset: VOICE
+09-05 16:01:46.396 16011 16075 D BudsService: Sending: 55600110f0010036014a52
+09-05 16:01:46.546 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:46.547 16011 16076 D BudsService: Parsed response - command: 0x7010, payload: 01
+09-05 16:01:46.547 16011 16076 D BudsService: Unhandled response 0x7010: 01
+09-05 16:01:47.414 16011 16011 D BudsService: Setting EQ preset: MORE_TREBLE
+09-05 16:01:47.416 16011 16075 D BudsService: Sending: 55600110f0010037020bc3
+09-05 16:01:47.447 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:47.447 16011 16076 D BudsService: Parsed response - command: 0x7010, payload: 01
+09-05 16:01:47.447 16011 16076 D BudsService: Unhandled response 0x7010: 01
+09-05 16:01:47.766 16011 16075 D BudsService: Polling status...
+09-05 16:01:47.768 16011 16209 D BudsService: Sending: 55600107c00000386ccd
+09-05 16:01:47.807 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:47.809 16011 16076 D BudsService: Parsed response - command: 0x4007, payload: 0202640364
+09-05 16:01:47.809 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:47.972 16011 16209 D BudsService: Sending: 5560011ec0000039b0cf
+09-05 16:01:48.081 16011 16076 D BudsService: Received 16 bytes
+09-05 16:01:48.084 16011 16076 D BudsService: Parsed response - command: 0x401e, payload: 010500020400
+09-05 16:01:48.084 16011 16076 D BudsService: ANC state: mode=OFF, level=ADAPTIVE
+09-05 16:01:48.252 16011 16011 D BudsService: Setting EQ preset: MORE_BASS
+09-05 16:01:48.252 16011 16077 D BudsService: Sending: 55600110f001003a03ce93
+09-05 16:01:48.297 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:48.297 16011 16076 D BudsService: Parsed response - command: 0x7010, payload: 01
+09-05 16:01:48.297 16011 16076 D BudsService: Unhandled response 0x7010: 01
+09-05 16:01:48.682 16011 16011 D BudsService: Setting EQ preset: BALANCED
+09-05 16:01:48.683 16011 16075 D BudsService: Sending: 55600110f001003b008f02
+09-05 16:01:48.801 16011 16076 D BudsService: Received 11 bytes
+09-05 16:01:48.802 16011 16076 D BudsService: Parsed response - command: 0x7010, payload: 01
+09-05 16:01:48.802 16011 16076 D BudsService: Unhandled response 0x7010: 01
+09-05 16:01:48.921 16011 16076 D BudsService: Received 17 bytes
+09-05 16:01:48.922 16011 16076 D BudsService: Parsed response - command: 0xe002, payload: 03038402840000
+09-05 16:01:48.924 16011 16076 D BudsService: Unhandled response 0xe002: 03038402840000
+09-05 16:01:49.316 16011 16076 D BudsService: Received 15 bytes
+09-05 16:01:49.318 16011 16076 D BudsService: Parsed response - command: 0xe001, payload: 0202640364
+09-05 16:01:49.318 16011 16076 D BudsService: Battery: L=100%, R=100%, Case=-1%
+09-05 16:01:52.324 16011 16749 D BudsService: State saved: ANC=OFF, EQ=BALANCED

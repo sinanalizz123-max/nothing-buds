@@ -217,6 +217,11 @@ class BudsService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand: ${intent?.action}")
+        // After Context.startForegroundService() every delivered command must call startForeground()
+        // — even when the service is already foreground. Skipping it on a start that lands while the
+        // service is already running crashes with ForegroundServiceDidNotStartInTimeException
+        // (seen in the field from BluetoothConnectionReceiver-triggered restarts).
+        startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
         when (intent?.action) {
             ACTION_CONNECT -> {
                 val address = intent.getStringExtra(EXTRA_DEVICE_ADDRESS)
@@ -874,6 +879,11 @@ class BudsService : Service() {
                 Log.d(TAG, "SET_DUAL ack")
                 // The earbuds restart after a dual toggle; re-read the list once it is back.
                 sendCommand(PacketBuilder.readDualDeviceList())
+            }
+
+            Commands.ACK_SET_EQ -> {
+                Log.d(TAG, "SET_EQ ack")
+                sendCommand(PacketBuilder.readEq())
             }
 
             Commands.ACK_SET_CONNECT_DEVICE -> {
