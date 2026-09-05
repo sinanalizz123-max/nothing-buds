@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer: the same headphone silhouette, single-tone, since the launcher recolours
+     the whole drawable and a second accent colour would be flattened anyway. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Headphones icon -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M54,24c-13.8,0 -25,11.2 -25,25v15c0,2.8 2.2,5 5,5h5c2.8,0 5,-2.2 5,-5v-10c0,-2.8 -2.2,-5 -5,-5h-5v0c0,-11 9,-20 20,-20s20,9 20,20v0h-5c-2.8,0 -5,2.2 -5,5v10c0,2.8 2.2,5 5,5h5c2.8,0 5,-2.2 5,-5v-15c0,-13.8 -11.2,-25 -25,-25z"/>
-
-    <!-- Nothing dot (circle as path) -->
     <path
-        android:fillColor="#D71921"
+        android:fillColor="#FFFFFF"
         android:pathData="M54,70a5,5 0,1 0,0 10a5,5 0,1 0,0 -10z"/>
 </vector>

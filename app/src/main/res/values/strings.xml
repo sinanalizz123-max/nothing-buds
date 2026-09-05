@@ -1,3 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Nothing Buds</string>
+    <string name="notification_channel_name">Earbuds Status</string>
+    <string name="notification_channel_description">Shows battery and ANC status of connected earbuds</string>
+    <string name="notification_channel_minimal_name">Background connection</string>
+    <string name="notification_channel_minimal_description">Silent placeholder shown while the quick-toggle hub is switched off. Android requires a notification for as long as the connection service runs.</string>
+    <string name="notif_minimal_text">Connected — hub hidden</string>
+
+    <string name="notif_connecting">Connecting…</string>
+    <string name="battery_unknown">Battery --</string>
+
+    <string name="mode_anc">ANC</string>
+    <string name="mode_transparency">Transparency</string>
+    <string name="mode_off">Off</string>
+    <!-- The segmented row is tight on narrow phones, so transparency gets a shorter label. -->
+    <string name="mode_transparency_short">Transp.</string>
+
+    <string name="anc_state_off">ANC off</string>
+    <string name="anc_state_low">ANC low</string>
+    <string name="anc_state_mid">ANC mid</string>
+    <string name="anc_state_high">ANC high</string>
+    <string name="anc_state_adaptive">ANC adaptive</string>
+
+    <string name="tile_label">Listening mode</string>
+    <string name="tile_disconnected">Not connected</string>
 </resources>

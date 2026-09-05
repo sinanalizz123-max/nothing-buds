@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.NothingBuds" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.NothingEarbuds" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/nothing_black</item>
+        <item name="android:navigationBarColor">@color/nothing_black</item>
+    </style>
 </resources>

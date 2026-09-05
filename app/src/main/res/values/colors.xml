@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nothing_red">#D71921</color>
+    <color name="nothing_black">#000000</color>
+    <color name="nothing_white">#FFFFFF</color>
+    <color name="nothing_gray">#1A1A1A</color>
+    <color name="nothing_light_gray">#2A2A2A</color>
+
+    <!-- Notification hub segments. RemoteViews cannot resolve theme attributes, so the light and
+         dark variants are picked through resource qualifiers instead. -->
+    <color name="segment_active_bg">#1C1B1F</color>
+    <color name="segment_active_fg">#FFFFFF</color>
+    <color name="segment_inactive_bg">#E6E1E5</color>
+    <color name="segment_inactive_fg">#1C1B1F</color>
+    <color name="hub_secondary_text">#49454F</color>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="segment_active_bg">#F2F0F4</color>
+    <color name="segment_active_fg">#1C1B1F</color>
+    <color name="segment_inactive_bg">#36343B</color>
+    <color name="segment_inactive_fg">#E6E1E5</color>
+    <color name="hub_secondary_text">#CAC4D0</color>
+</resources>
