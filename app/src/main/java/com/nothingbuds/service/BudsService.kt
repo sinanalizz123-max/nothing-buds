@@ -171,8 +171,15 @@ class BudsService : Service() {
 
         notificationHelper = NotificationHelper(this)
         // A foreground service must post something immediately; this placeholder is replaced by the
-        // real hub once connected, and pulled entirely if no earbuds show up.
-        startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+        // real hub once connected, and pulled entirely if no earbuds show up. On targetSdk 34+
+        // the connectedDevice FGS also needs the BLUETOOTH_CONNECT runtime permission to be granted
+        // right now — if a freshly born process catches this before the permission is in place the
+        // system throws, so degrade to stopSelf() instead of crashing the app.
+        if (!safeStartForeground()) {
+            Log.e(TAG, "Cannot run as a foreground service without Bluetooth permission; stopping")
+            stopSelf()
+            return
+        }
 
         // Register for Bluetooth events
         val filter = IntentFilter().apply {
@@ -221,7 +228,10 @@ class BudsService : Service() {
         // — even when the service is already foreground. Skipping it on a start that lands while the
         // service is already running crashes with ForegroundServiceDidNotStartInTimeException
         // (seen in the field from BluetoothConnectionReceiver-triggered restarts).
-        startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+        if (!safeStartForeground()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_CONNECT -> {
                 val address = intent.getStringExtra(EXTRA_DEVICE_ADDRESS)
@@ -582,7 +592,9 @@ class BudsService : Service() {
 
         // Keep the foreground hub up with a "Connecting…" label so the user sees we are still
         // waiting on the buds instead of silently shutting down.
-        startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+        runCatching {
+            startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+        }.onFailure { Log.e(TAG, "Could not stay foreground during reconnect; continuing in background", it) }
 
         reconnectJob = serviceScope.launch {
             var attempt = 0
@@ -872,7 +884,15 @@ class BudsService : Service() {
             Commands.RESPONSE_DIRAC_EQ -> {
                 val dirac = ResponseParser.parseDiracEq(response.payload)
                 Log.d(TAG, "Dirac EQ: preset=$dirac")
-                updateState { it.copy(diracEq = dirac) }
+                // On Dirac models the Dirac level is the active equalizer state; keep the UI
+                // preset in sync with what the earbuds actually have.
+                if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
+                    updateState {
+                        it.copy(diracEq = dirac, eqPreset = EqPreset.fromDiracLevel(dirac))
+                    }
+                } else {
+                    updateState { it.copy(diracEq = dirac) }
+                }
             }
 
             Commands.ACK_SET_DUAL -> {
@@ -1025,14 +1045,33 @@ class BudsService : Service() {
 
     fun setEqPreset(preset: EqPreset) {
         Log.d(TAG, "Setting EQ preset: $preset")
-        sendCommand(PacketBuilder.setEq(preset))
-        updateState { it.copy(eqPreset = preset) }
+        if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
+            // Dirac models (B172/B168) run the Dirac Opteo EQ as their whole equalizer through
+            // 0xF01D; the generic 0xF010 preset command is accepted but not applied by them,
+            // which is why presets used to "do nothing" on the CMF Buds Pro 2.
+            val level = EqPreset.toDiracLevel(preset)
+            Log.d(TAG, "Dirac-level EQ preset: $preset -> level $level")
+            sendCommand(PacketBuilder.setDiracEq(level))
+            updateState { it.copy(eqPreset = preset, diracEq = level) }
+        } else {
+            sendCommand(PacketBuilder.setEq(preset))
+            updateState { it.copy(eqPreset = preset) }
+        }
     }
 
     fun setCustomEq(bands: IntArray) {
         Log.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
-        sendCommand(PacketBuilder.setCustomEq(bands))
-        updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
+        if (BudsRepository.state.value.deviceModel?.hasDiracEq == true) {
+            // Entering custom mode on a Dirac model is the 0xF01D level 6 write; the 3-band
+            // ±6 dB float gains (53-byte 0xF041 template) are left untouched until mapped
+            // per-model, so a Dirac write only ever enters/keeps the buds' custom state.
+            Log.d(TAG, "Entering Dirac custom EQ (level 6)")
+            sendCommand(PacketBuilder.setDiracEq(6))
+            updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM, diracEq = 6) }
+        } else {
+            sendCommand(PacketBuilder.setCustomEq(bands))
+            updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
+        }
     }
 
     fun setInEarDetection(enabled: Boolean) {
@@ -1220,6 +1259,23 @@ class BudsService : Service() {
                     PackageManager.PERMISSION_GRANTED
         } else {
             true
+        }
+    }
+
+    /**
+     * Puts the service into the foreground. On targetSdk 34+ the connectedDevice FGS type is
+     * rejected with a SecurityException when the BLUETOOTH_CONNECT runtime permission (or one of
+     * its sibling FGS companion permissions) is not granted at this instant — e.g. a fresh
+     * process that won its race against the permission dialog, or a boot-time start before the
+     * user re-grants. We must not let that take the app down, so the callers decide how to degrade.
+     */
+    private fun safeStartForeground(): Boolean {
+        return try {
+            startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
+            true
+        } catch (e: SecurityException) {
+            Log.e(TAG, "startForeground denied: ${e.message}")
+            false
         }
     }
 

@@ -177,5 +177,27 @@ enum class EqPreset(val value: Byte) {
         private val BY_VALUE: Map<Int, EqPreset> by lazy { entries.associateBy { it.value.toInt() } }
 
         fun fromValue(value: Int): EqPreset = BY_VALUE[value] ?: BALANCED
+
+        /**
+         * Dirac models (B172 / B168) use the Dirac Opteo EQ as their whole equalizer (0xC050/0xF01D),
+         * with levels 0..5 for the named presets and 6 for custom — the generic 0xF010 preset command
+         * is not applied by these earbuds. Map each UI preset onto its Dirac level.
+         */
+        fun toDiracLevel(preset: EqPreset): Int = when (preset) {
+            BALANCED -> 0
+            VOICE -> 1
+            MORE_TREBLE -> 2
+            MORE_BASS -> 3
+            CUSTOM -> 6
+        }
+
+        /** Dirac reading (0xC050) → the UI preset closest to what the earbuds have active. */
+        fun fromDiracLevel(level: Int): EqPreset = when (level) {
+            1 -> VOICE
+            2 -> MORE_TREBLE
+            3 -> MORE_BASS
+            6 -> CUSTOM
+            else -> BALANCED
+        }
     }
 }

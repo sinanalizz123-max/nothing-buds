@@ -22,12 +22,15 @@ fun EQScreen(
     state: EarbudsState,
     onSetPreset: (EqPreset) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
-    onSetDiracEq: (Int) -> Unit,
     onBack: () -> Unit
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
     var selectedPreset by remember { mutableStateOf(state.eqPreset) }
-    var diracEnabled by remember { mutableStateOf(state.diracEq >= 1) }
+
+    val isDirac = state.deviceModel?.hasDiracEq == true
+    // Dirac models (B172/B168) run the Dirac Opteo EQ as their whole equalizer, and like the
+    // official app, that equalizer is unavailable while the LDAC/LHDC codec is on.
+    val eqLocked = isDirac && state.lhdc
 
     Scaffold(
         topBar = {
@@ -51,75 +54,60 @@ fun EQScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Dirac Opteo is just another EQ mode for Dirac models (CMF Buds Pro 2 / CMF Buds): one of the
-            // radio entries below, selected at a time. It is greyed out while the LDAC codec is on.
             Text(
-                "Equalizer",
+                if (isDirac) "Equalizer — Dirac Opteo" else "Equalizer",
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                if (isDirac) {
+                    "Presets are applied through the Dirac Opteo equalizer."
+                } else {
+                    "Pick a preset; the earbuds apply the curve instantly."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
+
+            if (eqLocked) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            "Equalizer disabled",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Dirac Opteo is unavailable while the LDAC/LHDC codec is on.\nTurn the codec off to use the equalizer.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
             EqPreset.entries.forEach { preset ->
                 EqPresetItem(
                     preset = preset,
-                    isSelected = selectedPreset == preset && !diracEnabled,
+                    isSelected = selectedPreset == preset,
+                    enabled = !eqLocked,
                     onClick = {
-                        diracEnabled = false
                         selectedPreset = preset
                         onSetPreset(preset)
                     }
                 )
-            }
-
-            if (state.deviceModel?.hasDiracEq == true) {
-                if (state.lhdc) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = false,
-                                onClick = null,
-                                enabled = false
-                            )
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(
-                                    "Dirac Opteo",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    "Disabled while the LDAC codec is on",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    EqPresetItemGeneric(
-                        label = "Dirac Opteo",
-                        description = "One of the equalizer modes",
-                        isSelected = diracEnabled,
-                        onClick = {
-                            diracEnabled = true
-                            onSetDiracEq(1)
-                        }
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -143,6 +131,22 @@ fun EQScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
+                        if (eqLocked) {
+                            Text(
+                                "Custom EQ is also part of Dirac Opteo and stays off while the codec is on.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        } else if (isDirac) {
+                            Text(
+                                "The CMF Buds Pro 2's custom curve is a 3-band Dirac curve (wire format still being validated); picking Custom recalls the stored curve from the earbuds.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        }
+
                         // Frequency labels
                         val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
 
@@ -158,13 +162,13 @@ fun EQScreen(
                                     // Slider (vertical)
                                     EqBandSlider(
                                         value = customBands[index],
+                                        enabled = !eqLocked,
                                         onValueChange = { newValue ->
                                             customBands = customBands.copyOf().also {
                                                 it[index] = newValue
                                             }
                                         },
                                         onValueChangeFinished = {
-                                            diracEnabled = false
                                             selectedPreset = EqPreset.CUSTOM
                                             onSetCustomEq(customBands)
                                         }
@@ -188,10 +192,10 @@ fun EQScreen(
                         OutlinedButton(
                             onClick = {
                                 customBands = IntArray(8) { 0 }
-                                diracEnabled = false
                                 selectedPreset = EqPreset.CUSTOM
                                 onSetCustomEq(customBands)
                             },
+                            enabled = !eqLocked,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
                             Text("Reset")
@@ -208,21 +212,13 @@ fun EQScreen(
 private fun EqPresetItem(
     preset: EqPreset,
     isSelected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                NothingRed.copy(alpha = 0.2f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        onClick = onClick
-    ) {
+    val contentColor = if (enabled) MaterialTheme.colorScheme.onSurface
+    else MaterialTheme.colorScheme.onSurfaceVariant
+
+    val itemContent: @Composable ColumnScope.() -> Unit = {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -232,8 +228,11 @@ private fun EqPresetItem(
             RadioButton(
                 selected = isSelected,
                 onClick = onClick,
+                enabled = enabled,
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = NothingRed
+                    selectedColor = NothingRed,
+                    disabledSelectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledUnselectedColor = MaterialTheme.colorScheme.outlineVariant
                 )
             )
 
@@ -242,7 +241,8 @@ private fun EqPresetItem(
             Column {
                 Text(
                     getPresetDisplayName(preset),
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor
                 )
                 Text(
                     getPresetDescription(preset),
@@ -252,11 +252,37 @@ private fun EqPresetItem(
             }
         }
     }
+
+    val containerColor = when {
+        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        isSelected -> NothingRed.copy(alpha = 0.2f)
+        else -> MaterialTheme.colorScheme.surface
+    }
+
+    if (enabled) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            onClick = onClick,
+            content = itemContent
+        )
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            content = itemContent
+        )
+    }
 }
 
 @Composable
 private fun EqBandSlider(
     value: Int,
+    enabled: Boolean,
     onValueChange: (Int) -> Unit,
     onValueChangeFinished: () -> Unit
 ) {
@@ -266,7 +292,11 @@ private fun EqBandSlider(
         Text(
             "${if (value > 0) "+" else ""}$value",
             style = MaterialTheme.typography.labelSmall,
-            color = if (value != 0) NothingRed else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (value != 0 && enabled) {
+                NothingRed
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
 
         Box(
@@ -279,6 +309,7 @@ private fun EqBandSlider(
                 value = value.toFloat(),
                 onValueChange = { onValueChange(it.toInt()) },
                 onValueChangeFinished = onValueChangeFinished,
+                enabled = enabled,
                 valueRange = -6f..6f,
                 steps = 11,
                 modifier = Modifier
@@ -287,7 +318,9 @@ private fun EqBandSlider(
                     .graphicsLayer { rotationZ = 90f },
                 colors = SliderDefaults.colors(
                     thumbColor = NothingRed,
-                    activeTrackColor = NothingRed
+                    activeTrackColor = NothingRed,
+                    disabledThumbColor = MaterialTheme.colorScheme.outlineVariant,
+                    disabledActiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                 )
             )
         }
@@ -311,54 +344,5 @@ private fun getPresetDescription(preset: EqPreset): String {
         EqPreset.MORE_TREBLE -> "Enhanced high frequencies"
         EqPreset.VOICE -> "Optimized for podcasts and calls"
         EqPreset.CUSTOM -> "Your custom equalizer settings"
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EqPresetItemGeneric(
-    label: String,
-    description: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                NothingRed.copy(alpha = 0.2f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = NothingRed
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(label, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }

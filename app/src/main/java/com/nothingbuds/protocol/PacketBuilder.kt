@@ -101,9 +101,9 @@ object PacketBuilder {
     fun setAnc(mode: AncMode): ByteArray =
         build(Commands.SET_ANC, byteArrayOf(0x01, mode.value, 0x00))
 
-    /** `[preset]` */
+    /** `[preset, 0x00]` — the official app sends the preset plus a trailing zero byte. */
     fun setEq(preset: EqPreset): ByteArray =
-        build(Commands.SET_EQ, byteArrayOf(preset.value))
+        build(Commands.SET_EQ, byteArrayOf(preset.value, 0x00))
 
     /** `[0x01, 0x01, enabled]` — in-ear detection sits in the "extra features" command. */
     fun setInEarDetection(enabled: Boolean): ByteArray =
@@ -196,11 +196,15 @@ object PacketBuilder {
     }
 
     /**
-     * Dirac Opteo EQ: `[level]` where 0..5 are the named presets and 6 selects custom, matching
-     * the numbering the ear-web Dirac models use.
+     * Dirac Opteo EQ: `[level, 0x00]` where 0..5 are the named presets and 6 selects custom,
+     * matching the ear-web Dirac models (`setListeningMode(level)` sends `0xF01D` with payload
+     * `[level, 0x00]`).
      */
     fun setDiracEq(level: Int): ByteArray =
-        build(Commands.SET_DIRAC_EQ, byteArrayOf(level.coerceIn(0, DIRAC_LEVEL_MAX).toByte()))
+        build(
+            Commands.SET_DIRAC_EQ,
+            byteArrayOf(level.coerceIn(0, DIRAC_LEVEL_MAX).toByte(), 0x00)
+        )
 
     /**
      * Auto power-off, in minutes as a BasicInt. 0 means the earbuds stay on indefinitely; the

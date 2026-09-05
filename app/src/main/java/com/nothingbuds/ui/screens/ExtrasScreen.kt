@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CallSplit
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Lightbulb
@@ -74,6 +75,7 @@ fun ExtrasScreen(
     onSetCaseLedColor: (Int) -> Unit,
     onSetDetailEnhancement: (Boolean, Int) -> Unit,
     onStartFitTest: () -> Unit,
+    onNavigateToEq: () -> Unit,
 ) {
     val context = LocalContext.current
     val bluetoothAdapter = remember {
@@ -216,6 +218,34 @@ fun ExtrasScreen(
                 }
             }
 
+            // Dirac Opteo is only offered on the CMF Buds Pro 2 / CMF Buds, where it is the one and
+            // only equalizer backend — nothing else in the app speaks the 0xC050/0xF01D dialect, so
+            // this extra is wired up Dirac-only on purpose.
+            if (model != null && model.hasDiracEq) {
+                SectionCard("Dirac Opteo", Icons.Default.Equalizer) {
+                    SettingRow(
+                        title = if (state.lhdc) "Unavailable while LDAC is on" else "Equalizer",
+                        subtitle = if (state.lhdc) {
+                            "The Dirac equalizer is held off by the LDAC codec, exactly as in the official app."
+                        } else {
+                            "${diracPresetName(state.diracEq)} — the CMF Buds Pro 2's equalizer is Dirac."
+                        },
+                        icon = Icons.Default.Equalizer,
+                    ) {
+                        FilledTonalButton(onClick = onNavigateToEq, enabled = !state.lhdc) {
+                            Text(if (state.lhdc) "Locked" else "Open")
+                        }
+                    }
+                    Text(
+                        "Dirac runs the presets and the custom curve from the equalizer screen. The "
+                            .plus("LDAC codec and Dirac cannot be active at the same time."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            }
+
             if (model == null || model.hasAutoPowerOff) {
                 SectionCard("Power", Icons.Default.PowerSettingsNew) {
                     SettingRow(
@@ -237,10 +267,16 @@ fun ExtrasScreen(
             }
 
             if (model == null || model.hasCaseLed) {
-                SectionCard("Case light", Icons.Default.Lightbulb) {
+                SectionCard("Case LED", Icons.Default.Lightbulb) {
                     Text(
-                        "Case LED colour",
+                        "Box LED colour",
                         style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        "Nothing Ear (1) only — the colour of the light ring on the charging case.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -353,6 +389,16 @@ private val DETAIL_LEVELS = listOf(
     2 to "Mid",
     3 to "High",
 )
+
+/** The named Dirac preset for a 0xC050 reading; 4/5 exist on the buds but are not in our preset list. */
+private fun diracPresetName(level: Int): String = when (level) {
+    1 -> "Voice"
+    2 -> "More Treble"
+    3 -> "More Bass"
+    6 -> "Custom"
+    4, 5 -> "Preset $level"
+    else -> "Balanced"
+}
 
 private val CASE_LED_COLORS = listOf(
     0xFFFFFFFF.toInt(),

@@ -144,7 +144,6 @@ class MainActivity : ComponentActivity() {
                                 state = state,
                                 onSetPreset = { preset -> budsService?.setEqPreset(preset) },
                                 onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
-                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -169,6 +168,7 @@ class MainActivity : ComponentActivity() {
                                     budsService?.setDetailEnhancement(enabled, level)
                                 },
                                 onStartFitTest = { budsService?.startFitTest() },
+                                onNavigateToEq = { navController.navigate("eq") },
                             )
                         }
 
