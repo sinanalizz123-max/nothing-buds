@@ -27,8 +27,18 @@ separately from `app/` and is never packaged or compiled into any APK.
       (commit `a6cc370`).
   - Case battery/docked states can also arrive over the Boxing transport (`NtBoxingApi`) in current
     releases; the `caseble` link advertised manufacturer `0x0056`.
+- `control-src/` — touch-control / smart-dial sources (`com.nothing.*.control.*`,
+  `com.nothing.*.core.device.IOTEar*GestureAction`, `ControlGestureViewModel`,
+  `ControlItemViewModel`, `SmartDialUtil`, `ControlConfigurationEntity`). Key facts:
+  - Everything (earbud slots + case button + smart dial) is one key-config packet
+    `[count, (device, button, gesture, operation) x count]` via 0xC018/0xF003; device 1=case,
+    2=left, 3=right.
+  - `supportSmartDial()` true only on Espeon (B172) + Heracross.
+  - Per-model trigger sets and dial assignment lists (espeon case: single {2,9,8,11,17},
+    hold {22,11,17}, double {3,25,1}, triple {26,1}, rotate {23=volume control,1}) — full write-up
+    in `control-and-smart-dial.md` on the Nothing-x-open re/ docs.
 - `dig-matched.tar.gz` — filtered matchup archive produced by the GitHub Actions dig workflow
-  (`Nothing-x-open/.github/workflows/dig-directed.yml`).
+  (`Nothing-x-open/.github/workflows/dig-directed.yml`); now includes the control-src tree.
 - `nothing-x-dex.zip` — the eight DEX files of a recent Nothing X release; the raw input used by
   the dig workflow (26 MB, kept for reproducibility).
 
