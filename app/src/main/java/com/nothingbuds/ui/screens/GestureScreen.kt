@@ -42,96 +42,10 @@ import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.PacketBuilder
 
 /**
- * Earbud trigger slots per model (wire type id → label), per `IOTEar*GestureAction`.
- * Espeon (B172) is the ear list `{2,3,7,8,9,0,15}` filtered by its SUPPORT_GESTURES
- * `{1,2,3,7,9,10,15}` → `{2,3,7,9,15}` (type 8 shares type 9's row, type 0 "slide on system"
- * is never offered). Type 15 shows as an arrow-only row without operations.
- */
-private fun earbudSlots(modelId: String?): List<Pair<Int, String>> = when (modelId) {
-    "B172" -> listOf(
-        2 to "Double tap",
-        3 to "Triple tap",
-        7 to "Tap & hold",
-        9 to "Double tap & hold",
-        15 to "Double press & hold",
-    )
-    else -> listOf(
-        2 to "Double tap",
-        3 to "Triple tap",
-        7 to "Tap & hold",
-        9 to "Double tap & hold",
-    )
-}
-
-/**
- * Charging-case trigger slots for smart-dial models (Espeon/Heracross `caseGestures`):
- * 1 single, 2 double, 3 triple, 7 press-hold, 10 rotate, 15 double-press-hold.
- */
-private val CASE_SLOTS = listOf(
-    1 to "Single press",
-    2 to "Double press",
-    3 to "Triple press",
-    7 to "Press & hold",
-    10 to "Rotate smart dial",
-    15 to "Double press & hold",
-)
-
-/**
- * Gesture 15 "double press & hold" is not configurable: on the case it is the fixed case-lock row
- * `Operation(4, 1, 15, 40)`, on the earbuds the official app renders an arrow-only row. Both show
- * without an action picker.
- */
-private fun isFixedSlot(side: Int, type: Int, modelId: String?): Boolean {
-    if (type != 15) return false
-    if (side == PacketBuilder.SIDE_CASE) return true
-    return modelId == "B172"
-}
-
-private fun fixedSlotLabel(side: Int, type: Int, modelId: String?): String? {
-    if (!isFixedSlot(side, type, modelId)) return null
-    return if (side == PacketBuilder.SIDE_CASE) "Case lock" else "Not configurable"
-}
-
-/**
- * Allowed action ids per (side, trigger), from the espeon `ControlItemViewModel` operation
- * arrays (CONFIRMED from the decompiled sources). "No action" (1) is always offered. Operation 31
- * (AI news) is only offered while the news feature is active, so it is deliberately left out.
- * Other models keep the full [GESTURE_ACTIONS] union.
- */
-private fun allowedActionIds(side: Int, type: Int, modelId: String?): List<Int> {
-    if (modelId != "B172") return GESTURE_ACTIONS.map { it.id }
-    if (isFixedSlot(side, type, modelId)) return emptyList()
-    if (side == PacketBuilder.SIDE_CASE) {
-        return when (type) {
-            // caseSinglePress/CASE_SUPPORT_SINGLE_PRESS {2,9,8,11,17} + [1]; play/pause head.
-            1 -> listOf(2, 9, 8, 11, 17, 1)
-            // casePressHold/CASE_SUPPORT_PRESS_HOLD {22,11,17} + [1].
-            7 -> listOf(22, 11, 17, 1)
-            // caseDoublePress: general single-press list + call ops CASE_SUPPORT_DOUBLE_PRESS_CALL {3,25,1}.
-            2 -> listOf(2, 9, 8, 11, 17, 1, 3, 25, 1)
-            // caseTriplePress: general single-press list + CASE_SUPPORT_TRIPLE_PRESS_CALL {26,1}.
-            3 -> listOf(2, 9, 8, 11, 17, 1, 26, 1)
-            // CASE_SUPPORT_ROTATE {23,1} → volume control; default no action.
-            10 -> listOf(23, 1)
-            else -> listOf(1)
-        }
-    }
-    return when (type) {
-        // earDoubleTap/SUPPORT_DOUBLE_OPERATIONS {2,8,9,11} + [1]; default 9.
-        2 -> listOf(2, 8, 9, 11, 1)
-        // earTripleTap/SUPPORT_OPERATIONS {8,9,11} + [1]; default 8.
-        3 -> listOf(8, 9, 11, 1)
-        // earLongTap/SUPPORT_OPERATIONS_NO_CLOSE {22,11} + [1]; default 22.
-        7 -> listOf(22, 11, 1)
-        // earTapAndLongPress/SUPPORT_OPERATIONS_LONG_PRESS {18,19,11} + [1]; default 1.
-        9 -> listOf(18, 19, 11, 1)
-        else -> listOf(1)
-    }
-}
-
-/**
- * Per-side gesture customization. Each trigger slot on the left/right earbud and the charging case
- * maps to an operation from [GESTURE_ACTIONS]; picking one writes a `SET_KEY_CONFIGURATION` packet.
+ * Per-side gesture customization. The rows, the charging-case rows and the per-trigger operation
+ * list all come from the connected model's [GestureProfile] ([GestureCapabilities.profileFor]),
+ * which mirrors the matching `ControlItemViewModel.convertOptions()` of the official app. The UI
+ * never offers operations a model does not expose, and no model falls back to the full union.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,6 +54,10 @@ fun GestureScreen(
     onBack: () -> Unit,
     onSetGesture: (Int, Int, Int) -> Unit,
 ) {
+    val profile = remember(state.deviceModel?.id) {
+        GestureCapabilities.profileFor(state.deviceModel?.id)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -161,10 +79,10 @@ fun GestureScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SideCard("Left earbud", PacketBuilder.SIDE_LEFT, earbudSlots(state.deviceModel?.id), state, onSetGesture)
-            SideCard("Right earbud", PacketBuilder.SIDE_RIGHT, earbudSlots(state.deviceModel?.id), state, onSetGesture)
-            if (state.deviceModel?.hasSmartDial == true) {
-                CaseCard(state, onSetGesture)
+            SideCard("Left earbud", PacketBuilder.SIDE_LEFT, profile.slots, state, onSetGesture)
+            SideCard("Right earbud", PacketBuilder.SIDE_RIGHT, profile.slots, state, onSetGesture)
+            if (state.deviceModel?.hasSmartDial == true && profile.caseSlots.isNotEmpty()) {
+                CaseCard(profile, state, onSetGesture)
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -175,20 +93,21 @@ fun GestureScreen(
 private fun SideCard(
     title: String,
     side: Int,
-    slots: List<Pair<Int, String>>,
+    slots: List<GestureSlot>,
     state: EarbudsState,
     onSetGesture: (Int, Int, Int) -> Unit,
 ) {
     SectionCard(title, Icons.Default.TouchApp) {
-        slots.forEachIndexed { index, (type, slotLabel) ->
+        slots.forEachIndexed { index, slot ->
             if (index > 0) Spacer(Modifier.height(4.dp))
-            GestureSlotRow(side = side, type = type, slotLabel = slotLabel, state = state, onSetGesture = onSetGesture)
+            GestureSlotRow(side = side, slot = slot, state = state, onSetGesture = onSetGesture)
         }
     }
 }
 
 @Composable
 private fun CaseCard(
+    profile: GestureProfile,
     state: EarbudsState,
     onSetGesture: (Int, Int, Int) -> Unit,
 ) {
@@ -199,9 +118,9 @@ private fun CaseCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        CASE_SLOTS.forEachIndexed { index, (type, slotLabel) ->
+        profile.caseSlots.forEachIndexed { index, slot ->
             if (index > 0) Spacer(Modifier.height(4.dp))
-            GestureSlotRow(side = PacketBuilder.SIDE_CASE, type = type, slotLabel = slotLabel, state = state, onSetGesture = onSetGesture)
+            GestureSlotRow(side = PacketBuilder.SIDE_CASE, slot = slot, state = state, onSetGesture = onSetGesture)
         }
     }
 }
@@ -209,18 +128,20 @@ private fun CaseCard(
 @Composable
 private fun GestureSlotRow(
     side: Int,
-    type: Int,
-    slotLabel: String,
+    slot: GestureSlot,
     state: EarbudsState,
     onSetGesture: (Int, Int, Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val modelId = state.deviceModel?.id
-    val allowed = GESTURE_ACTIONS.filter { it.id in allowedActionIds(side, type, modelId) }
-    val fixedLabel = fixedSlotLabel(side, type, modelId)
+    val profile = remember(state.deviceModel?.id) {
+        GestureCapabilities.profileFor(state.deviceModel?.id)
+    }
+    val allowedIds = profile.operationsFor(side, slot.type)
+    val allowed = GESTURE_ACTIONS.filter { it.id in allowedIds }
+    val fixedLabel = fixedSlotLabel(side, slot.type)
     val current = state.gestures
-        .find { it.side == side && it.type == type }
+        .find { it.side == side && it.type == slot.type }
         ?.let { GESTURE_ACTIONS.find { action -> action.id == it.action } }
         ?: allowed.find { it.id == 1 } ?: allowed.firstOrNull()
 
@@ -233,7 +154,7 @@ private fun GestureSlotRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(slotLabel, style = MaterialTheme.typography.bodyLarge)
+                Text(slot.label, style = MaterialTheme.typography.bodyLarge)
                 Text(
                     fixedLabel ?: current?.label ?: "",
                     style = MaterialTheme.typography.bodySmall,
@@ -252,7 +173,7 @@ private fun GestureSlotRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(slotLabel, style = MaterialTheme.typography.bodyLarge)
+            Text(slot.label, style = MaterialTheme.typography.bodyLarge)
             Text(
                 current?.label ?: "",
                 style = MaterialTheme.typography.bodySmall,
@@ -274,7 +195,7 @@ private fun GestureSlotRow(
                         onClick = {
                             expanded = false
                             if (action.id != current?.id) {
-                                onSetGesture(side, type, action.id)
+                                onSetGesture(side, slot.type, action.id)
                             }
                         },
                         leadingIcon = {
@@ -289,6 +210,16 @@ private fun GestureSlotRow(
             }
         }
     }
+}
+
+/**
+ * Gesture 15 "double press & hold" is never configurable: on the case it is the fixed case-lock
+ * row `Operation(4, 1, 15, 40)`, on the earbuds the official app renders an arrow-only row.
+ */
+private fun fixedSlotLabel(side: Int, type: Int): String? = when {
+    type != 15 -> null
+    side == PacketBuilder.SIDE_CASE -> "Case lock"
+    else -> "Not configurable"
 }
 
 // ---- Building blocks -------------------------------------------------------------------------

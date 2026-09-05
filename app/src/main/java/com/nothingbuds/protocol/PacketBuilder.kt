@@ -53,7 +53,7 @@ object PacketBuilder {
         return build(command, payload)
     }
 
-    // Convenience methods, payload shapes taken from the official app (see docs/PROTOCOL.md)
+    // Convenience methods, payload shapes taken from the official app (see re/SMART_DIAL.md, re/)
 
     fun readBattery(): ByteArray = build(Commands.READ_BATTERY)
 

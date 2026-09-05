@@ -4,7 +4,7 @@ package com.nothingbuds.protocol
  * Command table for the Nothing/CMF earbuds SPP protocol.
  *
  * Recovered from the official Nothing X app and verified against a CMF Buds 2 Plus — see
- * `docs/PROTOCOL.md`. Commands are 16-bit values sent little-endian.
+ * `re/REVERSE_ENGINEERING_STATUS.md` and `re/SMART_DIAL.md`. Commands are 16-bit values sent little-endian.
  *
  * A reply always carries the request command with bit 15 cleared, so `0xC007` is answered by
  * `0x4007` and `0xF00F` by `0x700F`. Use [responseOf] instead of hardcoding reply constants.
