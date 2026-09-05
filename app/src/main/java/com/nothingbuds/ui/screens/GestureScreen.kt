@@ -137,13 +137,15 @@ private fun GestureSlotRow(
     val profile = remember(state.deviceModel?.id) {
         GestureCapabilities.profileFor(state.deviceModel?.id)
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val allowedIds = profile.operationsFor(side, slot.type)
     val allowed = GESTURE_ACTIONS.filter { it.id in allowedIds }
     val fixedLabel = fixedSlotLabel(side, slot.type)
     val current = state.gestures
         .find { it.side == side && it.type == slot.type }
         ?.let { GESTURE_ACTIONS.find { action -> action.id == it.action } }
-        ?: allowed.find { it.id == 1 } ?: allowed.firstOrNull()
+        ?: allowed.find { it.id == profile.defaultFor(side, slot.type, context) }
+            ?: allowed.firstOrNull()
 
     if (fixedLabel != null || allowed.isEmpty()) {
         // Fixed or unconfigurable slot: show its state without a picker.

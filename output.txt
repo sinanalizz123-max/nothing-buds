@@ -1,0 +1,35 @@
+Task 1 — Default operations
+STATUS: DONE
+Evidence:
+- Re-opened decompiled Nothing X sources for every model:
+  re/control-src/com/nothing/{corsola,donphan,elekid,espeon,ear/{flaffy,one,two,color,stick,twos},crobat,girafarig,gligar}/control/ControlItemViewModel.java
+- Extracted setDefaultOperation() calls and matched them to gesture type:
+  * espeon (B172/B187) ear: g2=9 (earDoubleTap), g3=8 (earTripleTap), g7=22 (earLongTap), g8/9=1 (earTapAndLongPressGesture).
+  * espeon case: g1=1 (caseSinglePressGesture), g2=1 (caseDoublePressGesture), g3=1 (caseTriplePress), g7=1 (casePressHoldGesture), g10=1 (CASE_SUPPORT_ROTATE).
+  * girafarig/gligar (B179/B184) ear: g2=9, g3=8, g7=22, g9=1.
+  * corsola (B163) ear: g2=9, g3=8, g7=22, g8=1, g9=1.
+  * donphan (B168/B185) ear: g2=9, g3=8, g7=22, g9=1.
+  * crobat (B164) ear: g2=9, g3=8, g7=22.
+  * elekid (B170) ear: g2=9, g3=8, g7=22 (button!=10 path).
+  * ear/one (B181) ear: g3=9, g7=10.
+  * ear/two (B155) ear: g2=9, g3=8, g7=22, g9=1.
+  * ear/stick (B157) ear: g2=9, g3=8, g7=10, g9=1.
+  * ear/color (B162) ear: g2=9, g3=8, g7=22, g9=1.
+  * ear/flaffy (B174) ear: g2=9, g3=8, g7=SideDependent(19 left / 18 right), g9=1.
+  * ear/twos (B171) ear: g2=9, g3=8, g7=22, g9=1.
+Changes:
+- app/src/main/java/com/nothingbuds/ui/screens/GestureCapabilities.kt
+  * Added DefaultOp interface and FixedDefault, SideDependentDefault, OsDependentDefault implementations.
+  * Extended GestureProfile with `defaults: Map<Int, DefaultOp>` and `caseDefaults: Map<Int, DefaultOp>` plus a defaultFor() helper.
+  * Populated defaults/caseDefaults for every profile from the source-extracted setDefaultOperation() calls above.
+  * Replaced the FALLBACK profile (previously a guessed common denominator) with an empty one: an unknown model now exposes no rows and no operations.
+- app/src/main/java/com/nothingbuds/ui/screens/GestureScreen.kt
+  * GestureSlotRow() now resolves the displayed fallback action through profile.defaultFor(side, type, context) instead of the prior hard-coded "op 1 or first".
+Verification:
+- Spot-checked every model's `setDefaultOperation` line against the corresponding source file (see Evidence).
+- The new `defaultFor()` is consumed only by the UI; it does not alter wire-format writes.
+- Elekid's button-10 / Nothing-OS conditional default is exposed via OsDependentDefault; the button-10 path also needs `button` plumbing, but for now we record the unconditional g7=22 (the non-magic button) which is what the user-configurable gesture 7 row uses. The button-10 magic menu is not currently rendered in the UI, so its default is documented but not surfaced; the field is in place for a follow-up to plumb the button id.
+Confidence: ~95% (Elekid button-10 defaults are recorded but not yet plumbed through GestureScreen because the UI does not yet distinguish button-10 magic rows; not blocking Task 2).
+
+Task 2 — Elekid
+STATUS: PENDING (not yet started)

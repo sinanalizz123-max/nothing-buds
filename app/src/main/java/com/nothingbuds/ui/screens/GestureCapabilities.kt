@@ -2,6 +2,30 @@ package com.nothingbuds.ui.screens
 
 import com.nothingbuds.protocol.PacketBuilder
 
+import android.content.Context
+import android.os.Build
+import com.nothingbuds.protocol.PacketBuilder
+
+interface DefaultOp {
+    /** @param button 10 for the Elekid "magic" / "Nothing button"; 0 otherwise. */
+    fun get(context: Context, side: Int, button: Int): Int
+}
+
+class FixedDefault(val op: Int) : DefaultOp {
+    override fun get(context: Context, side: Int, button: Int) = op
+}
+
+class SideDependentDefault(val left: Int, val right: Int) : DefaultOp {
+    override fun get(context: Context, side: Int, button: Int) =
+        if (side == PacketBuilder.SIDE_LEFT) left else right
+}
+
+/** Nothing-OS dependent default: [nothingOs] when running on NothingOS, [other] otherwise. */
+class OsDependentDefault(val nothingOs: Int, val other: Int) : DefaultOp {
+    override fun get(context: Context, side: Int, button: Int) =
+        if (Build.MANUFACTURER.equals("Nothing", ignoreCase = true)) nothingOs else other
+}
+
 /**
  * One gesture slot of a device: the wire trigger [type] and the label [GestureScreen] shows.
  */
@@ -14,8 +38,11 @@ data class GestureSlot(val type: Int, val label: String)
  * - [slots] are the earbud trigger rows shown for left/right (wire type ids, source `SUPPORT_GESTURES`
  *   filtered to the rows that carry operations; type 15 rows are rendered arrow-only).
  * - [operations] maps an earbud trigger type to the operations the model actually offers, in source
- *   order (defaults resolved targets from `setDefaultOperation`, not re-invented).
- * - [caseSlots]/[caseOperations] are the charging-case rows for smart-dial products (Espeon/Heracross).
+ *   order.
+ * - [defaults] maps an earbud trigger type to its source-derived default operation (see
+ *   `setDefaultOperation` in each model's `ControlItemViewModel`).
+ * - [caseSlots]/[caseOperations]/[caseDefaults] are the charging-case rows for smart-dial products
+ *   (Espeon/Heracross).
  *
  * A model family must never fall back to the union of every operation: the official app only ever
  * shows the arrays below.
@@ -23,13 +50,20 @@ data class GestureSlot(val type: Int, val label: String)
 data class GestureProfile(
     val slots: List<GestureSlot>,
     val operations: Map<Int, List<Int>>,
+    val defaults: Map<Int, DefaultOp>,
     val caseSlots: List<GestureSlot> = emptyList(),
     val caseOperations: Map<Int, List<Int>> = emptyMap(),
+    val caseDefaults: Map<Int, DefaultOp> = emptyMap(),
 ) {
     /** Operations allowed for [side]/[type]; empty for arrow-only or fixed rows. */
     fun operationsFor(side: Int, type: Int): List<Int> =
         if (side == PacketBuilder.SIDE_CASE) caseOperations[type].orEmpty()
         else operations[type].orEmpty()
+
+    /** Default operation id from the decompiled source (`setDefaultOperation`). */
+    fun defaultFor(side: Int, type: Int, context: Context, button: Int = 0): Int =
+        (if (side == PacketBuilder.SIDE_CASE) caseDefaults[type] else defaults[type])
+            ?.get(context, side, button) ?: 1
 }
 
 /**
@@ -59,6 +93,12 @@ object GestureCapabilities {
             9 to listOf(18, 19, 11, 1),
             15 to emptyList(),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
         caseSlots = caseSlots(1, 2, 3, 7, 10, 15),
         caseOperations = mapOf(
             1 to listOf(2, 9, 8, 11, 17, 1),
@@ -67,6 +107,13 @@ object GestureCapabilities {
             3 to listOf(2, 9, 8, 11, 17, 1, 26, 1),
             10 to listOf(23, 1),
             15 to emptyList(),
+        ),
+        caseDefaults = mapOf(
+            1 to FixedDefault(1),
+            2 to FixedDefault(1),
+            3 to FixedDefault(1),
+            7 to FixedDefault(1),
+            10 to FixedDefault(1),
         ),
     )
 
@@ -81,6 +128,12 @@ object GestureCapabilities {
             9 to listOf(18, 19, 11, 31, 1),
             15 to emptyList(),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
     )
 
     // ---- Corsola (CMF Buds Pro, B163) — the only family that advertises a type-8 row -------------
@@ -94,6 +147,13 @@ object GestureCapabilities {
             8 to listOf(18, 19, 11, 1),
             9 to listOf(18, 19, 11, 1),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            8 to FixedDefault(1),
+            9 to FixedDefault(1),
+        ),
     )
 
     // ---- Donphan (CMF Buds, B168) / Hoothoot (CMF Buds 2a, B185) ----------------------------------
@@ -106,6 +166,12 @@ object GestureCapabilities {
             7 to listOf(10, 11),
             9 to listOf(18, 19, 11),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
     )
 
     // ---- Crobat (CMF Neckband Pro, B164) ---------------------------------------------------------
@@ -117,14 +183,26 @@ object GestureCapabilities {
             3 to listOf(8, 9, 11),
             7 to listOf(10),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+        ),
     )
 
     // ---- Elekid (B170) — single-button control: press-and-hold only ------------------------------
 
     val ELEKID = GestureProfile(
-        slots = slots(7),
+        slots = slots(2, 3, 7),
         operations = mapOf(
-            7 to listOf(10),
+            2 to listOf(8, 9, 11),
+            3 to listOf(8, 9, 11),
+            7 to listOf(10, 11, 1),
+        ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
         ),
     )
 
@@ -135,6 +213,10 @@ object GestureCapabilities {
         operations = mapOf(
             3 to listOf(8, 9, 1),
             7 to listOf(10, 1),
+        ),
+        defaults = mapOf(
+            3 to FixedDefault(9),
+            7 to FixedDefault(10),
         ),
     )
 
@@ -148,6 +230,12 @@ object GestureCapabilities {
             7 to listOf(10, 18, 19, 11),
             9 to listOf(10, 18, 19, 11, 1),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
     )
 
     // ---- Ear (stick) [B157] — no ANC, so hold and double-hold swap to volume ops ------------------
@@ -159,6 +247,12 @@ object GestureCapabilities {
             3 to listOf(8, 9, 11),
             7 to listOf(18, 19, 11),
             9 to listOf(1, 18, 19, 11),
+        ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(10),
+            9 to FixedDefault(1),
         ),
     )
 
@@ -172,6 +266,12 @@ object GestureCapabilities {
             7 to listOf(10, 18, 19, 11),
             9 to listOf(10, 18, 19, 11, 1),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
     )
 
     // ---- Ear (open) [B174] — no ANC, AI-news op 31 in the arrays ----------------------------------
@@ -183,6 +283,12 @@ object GestureCapabilities {
             3 to listOf(8, 9, 11, 31),
             7 to listOf(18, 19, 11, 31),
             9 to listOf(18, 19, 11, 31, 1),
+        ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to SideDependentDefault(19, 18), // left=vol+, right=vol-
+            9 to FixedDefault(1),
         ),
     )
 
@@ -196,17 +302,20 @@ object GestureCapabilities {
             7 to listOf(10, 18, 19, 11),
             9 to listOf(10, 18, 19, 11, 1),
         ),
+        defaults = mapOf(
+            2 to FixedDefault(9),
+            3 to FixedDefault(8),
+            7 to FixedDefault(22),
+            9 to FixedDefault(1),
+        ),
     )
 
-    // ---- Unknown models: common-denominator rows/ops, never the full union ------------------------
+    // ---- Unknown models: no defaults, no operations exposed --------------------------------------
 
     val FALLBACK = GestureProfile(
-        slots = slots(2, 3, 7),
-        operations = mapOf(
-            2 to listOf(8, 9, 11, 1),
-            3 to listOf(8, 9, 11, 1),
-            7 to listOf(10, 11, 1),
-        ),
+        slots = emptyList(),
+        operations = emptyMap(),
+        defaults = emptyMap(),
     )
 
     private val PROFILES: Map<String, GestureProfile> = mapOf(
