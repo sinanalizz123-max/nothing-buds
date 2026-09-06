@@ -20,7 +20,9 @@ ENHANCE_VOCALS, CLASSICAL, CUSTOM_EQ, IMMERSION_BOOST
   (`…$getHDACStatus$1$1.java`).
 - **B179**: same 7 rows/F01D; gate `type==0` (no product check).
 - **B168 Dirac**: same 7 rows/F01D; **no gate at all** (donphan `:250-…,317-323`).
-- **B168 non-Dirac / B185**: type-7-led 7 rows via F01D, no gate, `hasDiracEq=false`.
+- **B185 Hoothoot** (own product reusing donphan classes; all colors
+  `isSupportDirac()=false`), and any B168 unit reporting `isSupportDirac()=false`:
+  type-7-led 7 rows via F01D, no gate, `hasDiracEq=false`.
 - **B184/B175**: 6 rows via F01D (F01D *is* their whole EQ); no Opteo row.
 - Unknown-cloud: `diracOpteo` bitmask>0 → Dirac rows; Opteo row hidden unless
   cloud `diracByPowered()` (`UnknownSimpleActivityViewModel.java:706-712`;
@@ -29,8 +31,9 @@ ENHANCE_VOCALS, CLASSICAL, CUSTOM_EQ, IMMERSION_BOOST
 ## Read/authority
 Dirac VMs read **only** C050 (`getEQData`, e.g. espeon `:122-213`) and select the
 row whose `type` matches (`updateEQMode`, base `:868-931`). They never read C01F,
-so C01F≠C050 (e.g. our log: `eq=BALANCED` + C050=4) is normal: C050 wins for the
-Dirac screen; C01F is simply not consulted there.
+so C01F≠C050 (e.g. our log: `eq=BALANCED` + C050=4) is normal: C050 is the sole
+read source for the Dirac screen and C01F is simply not consulted there.
+("C050 wins" would imply observed conflict resolution — no such case is proven.)
 
 ## Custom recall
 Type 6 sends F01D `[06 00]` only — no extra operations (same `sendEqModelData`

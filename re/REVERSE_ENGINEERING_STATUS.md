@@ -1,7 +1,17 @@
 # Nothing X Buds — Reverse Engineering Status (Master Index)
 
-Status: **AUDIT LOCKED, IMPLEMENTATION (B172 GESTURE + DIRAC) DONE**
-Last updated: 2026-09-06
+> HISTORICAL / SUPERSEDED AS MASTER INDEX — preserved as evidence. The current
+> entry point is `re/INDEX.md`; structured findings live in the `re/` section
+> docs. Status taxonomy used across the knowledge base: COMPLETED /
+> PARTIALLY VERIFIED / UNRESOLVED / HARDWARE VALIDATION REQUIRED.
+> Original status line kept below for history:
+> **AUDIT LOCKED, IMPLEMENTATION (B172 GESTURE + DIRAC) DONE**
+> Last updated: 2026-09-06
+>
+> Current assessment of this document's areas: gesture/key-config mapping
+> COMPLETED (with the GET_KEY_CONFIGURATION correction below); EQ/Dirac now
+> covered in depth by `re/` section docs (PARTIALLY VERIFIED overall —
+> HARDWARE VALIDATION REQUIRED for B168 gate, B179 flags, custom round-trip).
 
 This is the master index for the Nothing X Buds reverse-engineering phase. It consolidates everything recovered from the APK and is the prerequisite for freezing the RE phase.
 

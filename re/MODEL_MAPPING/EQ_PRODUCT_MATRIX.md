@@ -14,8 +14,8 @@ launches its fixed `EqualizerActivity` (e.g. donphan `:52-55`).
 | CMF Buds | B168 | donphan | Dirac F01D/C050 | 7 if `isSupportDirac()` else 7-row non-Dirac variant (Dirac-EQ type 7 first) | yes iff `isSupportDirac()` (base `IOTDonphan` true; all B168 colors inherit) | 3-band F041 (same freq/Q) | no | NONE anywhere in donphan code |
 | Hoothoot (24283) | B185 | hoothoot (own product, `IOTDonphanAction`) | Dirac VM, non-Dirac branch | 7 (type 7 first, no Opteo) | no (`isSupportDirac()=false` all colors) | 3-band F041 | no | none |
 | CMF Buds 2 (24232) | B179 | girafarig | Dirac F01D/C050 | 7 (Opteo reportType 11 first) | yes, HDAC-gated (`type==0`, no product check) | 3-band F041 | no | type 0 only |
-| 24241 | B184 | gligar | Dirac F01D/C050 | 6 (no Opteo) | no (gate dead code) | 3-band F041 | no | none effective |
-| Headphone Pro (24211) | B175 | forretress | Dirac F01D/C050 | 6 (no Opteo) | no (gate dead code) | 3-band F041 | no | none effective |
+| 24241 | B184 | gligar | Dirac F01D/C050 | 6 (no Opteo) | no (type==0 branch present but unreachable — no type-0 row) | 3-band F041 | no | none effective |
+| Headphone Pro (24211) | B175 | forretress | Dirac F01D/C050 | 6 (no Opteo) | no (type==0 branch present but unreachable — no type-0 row) | 3-band F041 | no | none effective |
 | Buds Pro | B163 | corsola | UNKNOWN (own `com.nothing.corsola.equalizer.EqualizerActivity` referenced, not extracted) | UNKNOWN | UNKNOWN | UNKNOWN | no override (false) | UNKNOWN |
 | 24253 | B187 | heracross | UNKNOWN (no EQ package extracted; `hldcOrDiracOne()=false`) | UNKNOWN | UNKNOWN | UNKNOWN | no override (false) | UNKNOWN |
 | Ear (2) | — | ear/two | Simple F010/C01F + Advanced F04F/F050 | simple rows (`initSimpleEQItem`) | n/a | 3-band F041 + 8-band F050 | **yes** (`supportAdvanceEq()=true`) | n/a |
