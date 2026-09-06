@@ -121,6 +121,11 @@ class MainActivity : ComponentActivity() {
                                 onToggleSpatialAudio = { enabled ->
                                     budsService?.setSpatialAudio(enabled)
                                 },
+                                onToggleLhdc = { enabled -> budsService?.setLhdc(enabled) },
+                                onToggleDual = { enabled -> budsService?.setDual(enabled) },
+                                onSetDetailEnhancement = { enabled, level ->
+                                    budsService?.setDetailEnhancement(enabled, level)
+                                },
                                 onFindMyEarbuds = { side, play -> budsService?.findMyEarbuds(side, play) },
                                 onDisconnect = { budsService?.disconnect() }
                             )
@@ -170,14 +175,9 @@ class MainActivity : ComponentActivity() {
                                 state = state,
                                 onBack = { navController.popBackStack() },
                                 onNavigateToGestures = { navController.navigate("gestures") },
-                                onToggleDual = { enabled -> budsService?.setDual(enabled) },
                                 onSetConnectDevice = { mac -> budsService?.setConnectDevice(mac) },
-                                onToggleLhdc = { enabled -> budsService?.setLhdc(enabled) },
                                 onSetAutoPowerOff = { minutes -> budsService?.setAutoPowerOff(minutes) },
                                 onSetCaseLedColor = { color -> budsService?.setCaseLedColor(color) },
-                                onSetDetailEnhancement = { enabled, level ->
-                                    budsService?.setDetailEnhancement(enabled, level)
-                                },
                                 onStartFitTest = { budsService?.startFitTest() },
                                 onNavigateToEq = { navController.navigate("eq") },
                             )

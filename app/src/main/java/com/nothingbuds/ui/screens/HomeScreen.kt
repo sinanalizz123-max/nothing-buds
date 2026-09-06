@@ -20,15 +20,19 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.HearingDisabled
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpatialAudio
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +53,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTopAppBarState
@@ -101,6 +106,9 @@ fun HomeScreen(
     onToggleLowLatency: (Boolean) -> Unit,
     onSetBassBoost: (Boolean, Int) -> Unit,
     onToggleSpatialAudio: (Boolean) -> Unit,
+    onToggleLhdc: (Boolean) -> Unit,
+    onToggleDual: (Boolean) -> Unit,
+    onSetDetailEnhancement: (Boolean, Int) -> Unit,
     onFindMyEarbuds: (Int, Boolean) -> Unit,
     onDisconnect: () -> Unit,
 ) {
@@ -158,6 +166,8 @@ fun HomeScreen(
                     onNavigateToEQ = onNavigateToEQ,
                     onSetBassBoost = onSetBassBoost,
                     onToggleSpatialAudio = onToggleSpatialAudio,
+                    onToggleLhdc = onToggleLhdc,
+                    onSetDetailEnhancement = onSetDetailEnhancement,
                 )
             }
 
@@ -166,6 +176,7 @@ fun HomeScreen(
                     state = state,
                     onToggleInEar = onToggleInEar,
                     onToggleLowLatency = onToggleLowLatency,
+                    onToggleDual = onToggleDual,
                 )
             }
 
@@ -420,7 +431,11 @@ private fun SoundCard(
     onNavigateToEQ: () -> Unit,
     onSetBassBoost: (Boolean, Int) -> Unit,
     onToggleSpatialAudio: (Boolean) -> Unit,
+    onToggleLhdc: (Boolean) -> Unit,
+    onSetDetailEnhancement: (Boolean, Int) -> Unit,
 ) {
+    val rebootGate = remember { RebootGate() }
+    var showRebootDialog by remember { mutableStateOf(false) }
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
@@ -475,6 +490,69 @@ private fun SoundCard(
         ) {
             Switch(checked = state.spatialAudio, onCheckedChange = onToggleSpatialAudio)
         }
+
+        if (model == null || model.hasLhdc) {
+            Spacer(Modifier.height(4.dp))
+            SettingRow(
+                title = "LDAC",
+                subtitle = "High-resolution wireless audio",
+                icon = Icons.Default.HighQuality,
+            ) {
+                Switch(
+                    checked = state.lhdc,
+                    onCheckedChange = {
+                        if (it != state.lhdc) {
+                            rebootGate.request { onToggleLhdc(it) }
+                            showRebootDialog = true
+                        }
+                    },
+                )
+            }
+        }
+
+        if (model == null || model.hasDetailEnhancement) {
+            Spacer(Modifier.height(4.dp))
+            SettingRow(
+                title = "Detail enhancement",
+                subtitle = "Sharpen highs for a richer sound",
+                icon = Icons.Default.Star,
+            ) {
+                Switch(
+                    checked = state.detailEnhancement,
+                    onCheckedChange = { onSetDetailEnhancement(it, state.detailEnhancementLevel) },
+                )
+            }
+            if (state.detailEnhancement) {
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DETAIL_LEVELS.forEach { (level, label) ->
+                        FilterChip(
+                            selected = state.detailEnhancementLevel == level,
+                            onClick = { onSetDetailEnhancement(true, level) },
+                            label = { Text(label) },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (showRebootDialog) {
+            AlertDialog(
+                onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
+                confirmButton = {
+                    TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
+                        Text("Reboot now")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { rebootGate.cancel(); showRebootDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                title = { Text("Reboot required") },
+                text = { Text("Changing the codec makes the earbuds reboot; they drop offline briefly while restarting.") }
+            )
+        }
     }
 }
 
@@ -485,7 +563,10 @@ private fun BehaviourCard(
     state: EarbudsState,
     onToggleInEar: (Boolean) -> Unit,
     onToggleLowLatency: (Boolean) -> Unit,
+    onToggleDual: (Boolean) -> Unit,
 ) {
+    val rebootGate = remember { RebootGate() }
+    var showRebootDialog by remember { mutableStateOf(false) }
     SectionCard(title = "Behaviour", icon = Icons.Default.Speed) {
         val model = state.deviceModel
 
@@ -508,6 +589,47 @@ private fun BehaviourCard(
             ) {
                 Switch(checked = state.lowLatencyMode, onCheckedChange = onToggleLowLatency)
             }
+        }
+
+        if (model == null || model.hasDual) {
+            Spacer(Modifier.height(4.dp))
+            SettingRow(
+                title = "Dual connection",
+                subtitle = if (state.dualDevice) {
+                    "On — connect up to two devices at once"
+                } else {
+                    "Off — single device at a time"
+                },
+                icon = Icons.AutoMirrored.Filled.CallSplit,
+            ) {
+                Switch(
+                    checked = state.dualDevice,
+                    onCheckedChange = {
+                        if (it != state.dualDevice) {
+                            rebootGate.request { onToggleDual(it) }
+                            showRebootDialog = true
+                        }
+                    },
+                )
+            }
+        }
+
+        if (showRebootDialog) {
+            AlertDialog(
+                onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
+                confirmButton = {
+                    TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
+                        Text("Reboot now")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { rebootGate.cancel(); showRebootDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                title = { Text("Reboot required") },
+                text = { Text("Toggling dual connection makes the earbuds reboot; they drop offline briefly while restarting.") }
+            )
         }
     }
 }
@@ -566,7 +688,7 @@ private fun MoreCard(onNavigateToExtras: () -> Unit) {
     SectionCard(title = "More", icon = Icons.Default.MoreHoriz) {
         SettingRow(
             title = "Advanced controls",
-            subtitle = "Gestures, dual device, LHDC, case light, ear-tip fit test",
+            subtitle = "Gestures, paired devices, case light, ear-tip fit test",
             icon = Icons.Default.Tune,
         ) {
             FilledTonalButton(onClick = onNavigateToExtras) { Text("Open") }

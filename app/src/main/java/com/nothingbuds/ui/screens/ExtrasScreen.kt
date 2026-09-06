@@ -68,12 +68,9 @@ fun ExtrasScreen(
     state: EarbudsState,
     onBack: () -> Unit,
     onNavigateToGestures: () -> Unit,
-    onToggleDual: (Boolean) -> Unit,
     onSetConnectDevice: (String) -> Unit,
-    onToggleLhdc: (Boolean) -> Unit,
     onSetAutoPowerOff: (Int) -> Unit,
     onSetCaseLedColor: (Int) -> Unit,
-    onSetDetailEnhancement: (Boolean, Int) -> Unit,
     onStartFitTest: () -> Unit,
     onNavigateToEq: () -> Unit,
 ) {
@@ -149,31 +146,15 @@ fun ExtrasScreen(
                 }
             }
 
-            if (model == null || model.hasDual) {
+            if ((model == null || model.hasDual) &&
+                state.dualDevice && state.dualDevices.isNotEmpty()
+            ) {
                 SectionCard("Multipoint", Icons.Default.CallSplit) {
-                    SettingRow(
-                        title = "Dual device",
-                        subtitle = if (state.dualDevice) {
-                            "On — connect up to two devices at once"
-                        } else {
-                            "Off — single device at a time"
-                        },
-                        icon = Icons.Default.CallSplit,
-                    ) {
-                        Switch(checked = state.dualDevice, onCheckedChange = onToggleDual)
-                    }
                     Text(
-                        "Toggling dual connection makes the earbuds reboot; they drop offline briefly while restarting.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
+                        "Paired devices",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
-                    if (state.dualDevice && state.dualDevices.isNotEmpty()) {
-                        Text(
-                            "Paired devices",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-                        )
                         state.dualDevices.forEachIndexed { index, device ->
                             if (index > 0) Spacer(Modifier.height(4.dp))
                             Row(
@@ -202,25 +183,6 @@ fun ExtrasScreen(
                         }
                     }
                 }
-            }
-
-            if (model == null || model.hasLhdc) {
-                SectionCard("Codec", Icons.Default.HighQuality) {
-                    SettingRow(
-                        title = "LHDC / LDAC",
-                        subtitle = "High-resolution wireless audio",
-                        icon = Icons.Default.HighQuality,
-                    ) {
-                        Switch(checked = state.lhdc, onCheckedChange = onToggleLhdc)
-                    }
-                    Text(
-                        "Changing codec makes the earbuds reboot; they drop offline briefly while restarting.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-            }
 
             // Dirac Opteo is a preset row inside the equalizer screen (0xC050/0xF01D), not an
             // extra — so it is not surfaced here, exactly like the other EQ profiles.
@@ -267,33 +229,6 @@ fun ExtrasScreen(
                                 selected = state.caseLedColor == color,
                                 onClick = { onSetCaseLedColor(color) },
                             )
-                        }
-                    }
-                }
-            }
-
-            if (model == null || model.hasDetailEnhancement) {
-                SectionCard("Detail enhancement", Icons.Default.Star) {
-                    SettingRow(
-                        title = "Detail enhancement",
-                        subtitle = "Sharpen highs for a richer sound",
-                        icon = Icons.Default.Star,
-                    ) {
-                        Switch(
-                            checked = state.detailEnhancement,
-                            onCheckedChange = { onSetDetailEnhancement(it, state.detailEnhancementLevel) },
-                        )
-                    }
-                    if (state.detailEnhancement) {
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DETAIL_LEVELS.forEach { (level, label) ->
-                                FilterChip(
-                                    selected = state.detailEnhancementLevel == level,
-                                    onClick = { onSetDetailEnhancement(true, level) },
-                                    label = { Text(label) },
-                                )
-                            }
                         }
                     }
                 }
@@ -369,7 +304,7 @@ private val POWER_OFF_OPTIONS = listOf(0, 10, 20, 30, 60)
 private fun powerOffLabel(minutes: Int): String =
     if (minutes == 0) "Off" else "$minutes min"
 
-private val DETAIL_LEVELS = listOf(
+internal val DETAIL_LEVELS = listOf(
     1 to "Low",
     2 to "Mid",
     3 to "High",

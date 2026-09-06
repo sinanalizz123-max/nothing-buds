@@ -51,6 +51,8 @@ PARTIALLY VERIFIED / UNRESOLVED / HARDWARE VALIDATION REQUIRED.
 - End-to-end call chains: `CALL_CHAINS/EQ_CALL_CHAINS.md`
 - Evidence index (finding→file:line→confidence): `EVIDENCE/EQ_EVIDENCE.md`
 - Open questions: `UNKNOWN/EQ_REMAINING_UNKNOWNS.md`
+- Noise Control + Detail Enhancement: `NOISE_CONTROL/NOISE_CONTROL.md`,
+  `NOISE_CONTROL/DETAIL_ENHANCEMENT.md`
 
 ## Historical high-level reports
 - `.ai/EQ_REVERSE_ENGINEERING.md` (1st pass) and
