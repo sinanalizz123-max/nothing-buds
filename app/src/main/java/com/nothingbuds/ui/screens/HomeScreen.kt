@@ -2,6 +2,7 @@ package com.nothingbuds.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,11 +49,13 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.Color
+import com.nothingbuds.ui.components.LiquidToggle
+import com.nothingbuds.ui.components.SpringSegmentedControl
+import com.nothingbuds.ui.theme.AmbientBackground
+import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.glassCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -119,6 +122,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -143,10 +147,14 @@ fun HomeScreen(
             return@Scaffold
         }
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+        ) {
+            AmbientBackground()
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 start = 16.dp, end = 16.dp, bottom = 32.dp
             ),
@@ -193,6 +201,7 @@ fun HomeScreen(
                 DeviceFooter(state = state, onDisconnect = onDisconnect)
             }
         }
+        }
     }
 }
 
@@ -202,11 +211,14 @@ fun HomeScreen(
 @Composable
 private fun BatteryCard(state: EarbudsState) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassCard(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = LiquidTheme.GlassBg,
         ),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = LiquidTheme.CardShape,
+        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             SectionLabel("Battery", Icons.Default.BatteryFull)
@@ -382,29 +394,23 @@ private fun ListeningModeCard(
         else -> ListeningMode.ANC
     }
 
-    SectionCard(title = "Listening mode", icon = Icons.Default.Hearing) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            modes.forEachIndexed { index, mode ->
-                SegmentedButton(
-                    selected = selected == mode,
-                    onClick = {
-                        onSetAncMode(
-                            when (mode) {
-                                // Returning to ANC picks up the level the earbuds remember.
-                                ListeningMode.ANC ->
-                                    state.ancLevel.takeIf { it.isAnc } ?: AncMode.HIGH
-                                ListeningMode.TRANSPARENCY -> AncMode.TRANSPARENCY
-                                ListeningMode.OFF -> AncMode.OFF
-                            }
-                        )
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(index, modes.size),
-                    icon = {},
-                ) {
-                    Text(mode.label)
-                }
+        SectionCard(title = "Listening mode", icon = Icons.Default.Hearing) {
+        SpringSegmentedControl(
+            options = modes.map { it.label },
+            selectedIndex = modes.indexOf(selected),
+            onSelect = { index ->
+                val mode = modes[index]
+                onSetAncMode(
+                    when (mode) {
+                        // Returning to ANC picks up the level the earbuds remember.
+                        ListeningMode.ANC ->
+                            state.ancLevel.takeIf { it.isAnc } ?: AncMode.HIGH
+                        ListeningMode.TRANSPARENCY -> AncMode.TRANSPARENCY
+                        ListeningMode.OFF -> AncMode.OFF
+                    }
+                )
             }
-        }
+        )
 
         AnimatedVisibility(visible = selected == ListeningMode.ANC) {
             Column {
@@ -470,7 +476,7 @@ private fun SoundCard(
                 subtitle = if (state.enhancedBass) "Level ${state.bassLevel}" else "Off",
                 icon = Icons.Default.Tune,
             ) {
-                Switch(
+                LiquidToggle(
                     checked = state.enhancedBass,
                     onCheckedChange = { onSetBassBoost(it, state.bassLevel) },
                 )
@@ -498,7 +504,7 @@ private fun SoundCard(
             subtitle = if (state.spatialAudio) "On" else "Off",
             icon = Icons.Default.SpatialAudio,
         ) {
-            Switch(checked = state.spatialAudio, onCheckedChange = onToggleSpatialAudio)
+            LiquidToggle(checked = state.spatialAudio, onCheckedChange = onToggleSpatialAudio)
         }
 
         if (model == null || model.hasLhdc) {
@@ -508,7 +514,7 @@ private fun SoundCard(
                 subtitle = "High-resolution wireless audio",
                 icon = Icons.Default.HighQuality,
             ) {
-                Switch(
+                LiquidToggle(
                     checked = state.lhdc,
                     onCheckedChange = {
                         if (it != state.lhdc) {
@@ -527,7 +533,7 @@ private fun SoundCard(
                 subtitle = "Sharpen highs for a richer sound",
                 icon = Icons.Default.Star,
             ) {
-                Switch(
+                LiquidToggle(
                     checked = state.detailEnhancement,
                     onCheckedChange = { onSetDetailEnhancement(it, state.detailEnhancementLevel) },
                 )
@@ -549,6 +555,7 @@ private fun SoundCard(
         if (showRebootDialog) {
             AlertDialog(
                 onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
+                containerColor = LiquidTheme.DialogBg,
                 confirmButton = {
                     TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
                         Text("Reboot now")
@@ -586,7 +593,7 @@ private fun BehaviourCard(
                 subtitle = "Pause when you take an earbud out",
                 icon = Icons.Default.Hearing,
             ) {
-                Switch(checked = state.inEarDetection, onCheckedChange = onToggleInEar)
+                LiquidToggle(checked = state.inEarDetection, onCheckedChange = onToggleInEar)
             }
         }
 
@@ -597,7 +604,7 @@ private fun BehaviourCard(
                 subtitle = "Less audio delay while gaming",
                 icon = Icons.Default.Speed,
             ) {
-                Switch(checked = state.lowLatencyMode, onCheckedChange = onToggleLowLatency)
+                LiquidToggle(checked = state.lowLatencyMode, onCheckedChange = onToggleLowLatency)
             }
         }
 
@@ -612,7 +619,7 @@ private fun BehaviourCard(
                 },
                 icon = Icons.AutoMirrored.Filled.CallSplit,
             ) {
-                Switch(
+                LiquidToggle(
                     checked = state.dualDevice,
                     onCheckedChange = {
                         if (it != state.dualDevice) {
@@ -627,6 +634,7 @@ private fun BehaviourCard(
         if (showRebootDialog) {
             AlertDialog(
                 onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
+                containerColor = LiquidTheme.DialogBg,
                 confirmButton = {
                     TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
                         Text("Reboot now")
@@ -777,11 +785,14 @@ private fun SectionCard(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassCard(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = LiquidTheme.GlassBg,
         ),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = LiquidTheme.CardShape,
+        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             SectionLabel(title, icon)

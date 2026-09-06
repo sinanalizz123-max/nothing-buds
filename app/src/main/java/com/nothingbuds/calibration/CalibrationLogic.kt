@@ -24,6 +24,9 @@ class ThresholdTracker {
     val isDone: Boolean
         get() = reversals >= CalibrationTones.REQUIRED_REVERSALS || trials >= CalibrationTones.MAX_TRIALS
 
+    val progressFraction: Float
+        get() = (trials.toFloat() / CalibrationTones.MAX_TRIALS).coerceIn(0f, 1f)
+
     fun answer(heard: Boolean): Float {
         trials += 1
         val direction = if (heard) -1 else 1

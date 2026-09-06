@@ -9,14 +9,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
-import com.nothingbuds.ui.theme.NothingRed
+import com.nothingbuds.ui.components.EqDragSlider
+import com.nothingbuds.ui.theme.AmbientBackground
+import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.glassCard
 import kotlin.math.roundToInt
 
 internal fun eqTileColumns(maxWidthDp: Int): Int = (maxWidthDp / 112).coerceIn(2, 4)
@@ -65,12 +69,18 @@ fun EQScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        }
+        },
+        containerColor = Color.Transparent
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+            AmbientBackground()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -161,10 +171,13 @@ fun EQScreen(
                 )
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .glassCard(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                        containerColor = LiquidTheme.GlassBg
+                    ),
+                    border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
                 ) {
                     Column(
                         modifier = Modifier
@@ -185,7 +198,7 @@ fun EQScreen(
                                         modifier = Modifier.weight(1f),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        EqBandSlider(
+                                        EqDragSlider(
                                             value = diracBands[index],
                                             onValueChange = { newValue ->
                                                 diracBands = diracBands.copyOf().also {
@@ -233,7 +246,7 @@ fun EQScreen(
                                     modifier = Modifier.weight(1f),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                        EqBandSlider(
+                                        EqDragSlider(
                                             value = customBands[index],
                                             onValueChange = { newValue ->
                                                 customBands = customBands.copyOf().also {
@@ -274,11 +287,13 @@ fun EQScreen(
                 }
             }
         }
+        }
     }
 
     if (showDiracUnavailable) {
         AlertDialog(
             onDismissRequest = { showDiracUnavailable = false },
+            containerColor = LiquidTheme.DialogBg,
             confirmButton = {
                 TextButton(onClick = { showDiracUnavailable = false }) { Text("OK") }
             },
@@ -332,10 +347,16 @@ private fun EqPresetTile(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.padding(vertical = 0.dp),
+        modifier = modifier
+            .padding(vertical = 0.dp)
+            .glassCard(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) NothingRed.copy(alpha = 0.2f)
-            else MaterialTheme.colorScheme.surface
+            containerColor = if (isSelected) LiquidTheme.AccentGlow
+            else LiquidTheme.GlassBg
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) LiquidTheme.Accent else LiquidTheme.GlassBorder
         ),
         onClick = onClick
     ) {
@@ -348,7 +369,7 @@ private fun EqPresetTile(
             Text(
                 label,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurface,
+                color = if (isSelected) LiquidTheme.Accent else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -361,48 +382,6 @@ private fun EqPresetTile(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun EqBandSlider(
-    value: Int,
-    onValueChange: (Int) -> Unit,
-    onValueChangeFinished: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "${if (value > 0) "+" else ""}$value",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (value != 0) NothingRed else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Box(
-            modifier = Modifier
-                .width(48.dp)
-                .height(200.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Slider(
-                value = value.toFloat(),
-                onValueChange = { onValueChange(it.toInt()) },
-                onValueChangeFinished = onValueChangeFinished,
-                valueRange = -6f..6f,
-                steps = 11,
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(44.dp)
-                    .graphicsLayer { rotationZ = 90f },
-                colors = SliderDefaults.colors(
-                    thumbColor = NothingRed,
-                    activeTrackColor = NothingRed,
-                    disabledThumbColor = MaterialTheme.colorScheme.outlineVariant,
-                    disabledActiveTrackColor = MaterialTheme.colorScheme.outlineVariant
-                )
             )
         }
     }

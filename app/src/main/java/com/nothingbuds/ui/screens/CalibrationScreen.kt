@@ -17,8 +17,12 @@ import com.nothingbuds.calibration.SystemEq
 import com.nothingbuds.calibration.ThresholdTracker
 import com.nothingbuds.calibration.TonePlayer
 import com.nothingbuds.calibration.generateMyEq
+import androidx.compose.ui.graphics.Color
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.AncMode
+import com.nothingbuds.ui.components.GlassButton
+import com.nothingbuds.ui.components.ProgressRing
+import com.nothingbuds.ui.theme.AmbientBackground
 
 private enum class CalibrationStep { INSTRUCTIONS, TESTING, RESULT }
 
@@ -35,6 +39,7 @@ fun CalibrationScreen(
     var step by remember { mutableStateOf(CalibrationStep.INSTRUCTIONS) }
     var freqIndex by remember { mutableStateOf(0) }
     var tracker by remember { mutableStateOf(ThresholdTracker()) }
+    var trialProgress by remember { mutableStateOf(0f) }
     var thresholds by remember { mutableStateOf(mapOf<Int, Float>()) }
     var ancNotice by remember { mutableStateOf<String?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
@@ -72,6 +77,7 @@ fun CalibrationScreen(
             } else {
                 freqIndex += 1
                 tracker = ThresholdTracker()
+                trialProgress = 0f
             }
         } else {
             player.setVolume(tracker.level)
@@ -91,12 +97,18 @@ fun CalibrationScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        }
+        },
+        containerColor = Color.Transparent
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+            AmbientBackground()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -133,16 +145,17 @@ fun CalibrationScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(onClick = onBack) { Text("Cancel") }
-                        Button(onClick = {
+                        GlassButton(text = "Cancel", primary = false, onClick = onBack)
+                        GlassButton(text = "Continue", primary = true, onClick = {
                             ancNotice = ancController.begin(state.ancMode)
                             freqIndex = 0
                             tracker = ThresholdTracker()
                             thresholds = emptyMap()
                             applied = false
                             failure = null
+                            trialProgress = 0f
                             step = CalibrationStep.TESTING
-                        }) { Text("Continue") }
+                        })
                     }
                 }
 
@@ -158,12 +171,19 @@ fun CalibrationScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Text(
-                        "Frequency ${freqIndex + 1} of ${freqs.size}: $freq Hz",
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
+                    ProgressRing(
+                        progress = trialProgress,
+                        centerText = "$freq",
+                        unit = "Hz"
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Frequency ${freqIndex + 1} of ${freqs.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "Can you hear the tone?",
                         style = MaterialTheme.typography.bodyLarge,
@@ -186,17 +206,33 @@ fun CalibrationScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = {
-                            tracker.answer(heard = true)
-                            advanceTest()
-                        }) { Text("I Hear It") }
-                        OutlinedButton(onClick = {
-                            tracker.answer(heard = false)
-                            advanceTest()
-                        }) { Text("I Don't Hear It") }
+                        GlassButton(
+                            text = "I Hear It",
+                            primary = true,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                tracker.answer(heard = true)
+                                trialProgress = tracker.progressFraction
+                                advanceTest()
+                            }
+                        )
+                        GlassButton(
+                            text = "I Don't Hear It",
+                            primary = false,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                tracker.answer(heard = false)
+                                trialProgress = tracker.progressFraction
+                                advanceTest()
+                            }
+                        )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    TextButton(onClick = { stopTest() }) { Text("Stop Test") }
+                    GlassButton(
+                        text = "Stop Test",
+                        primary = false,
+                        onClick = { stopTest() }
+                    )
                 }
 
                 CalibrationStep.RESULT -> {
@@ -230,11 +266,15 @@ fun CalibrationScreen(
                             textAlign = TextAlign.Center
                         )
                     } else if (!applied) {
-                        Button(onClick = {
-                            onSaveMyEq(bass, mid, treble)
-                            onApplyMyEq()
-                            applied = true
-                        }) { Text("Apply to Buds EQ") }
+                        GlassButton(
+                            text = "Apply to Buds EQ",
+                            primary = true,
+                            onClick = {
+                                onSaveMyEq(bass, mid, treble)
+                                onApplyMyEq()
+                                applied = true
+                            }
+                        )
                     } else {
                         Text(
                             "Applied to Buds EQ. Find it as My EQ in the Equalizer.",
@@ -243,9 +283,10 @@ fun CalibrationScreen(
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    TextButton(onClick = onBack) { Text("Done") }
+                    GlassButton(text = "Done", primary = false, onClick = onBack)
                 }
             }
+        }
         }
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -43,7 +44,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.Color
+import com.nothingbuds.ui.components.LiquidToggle
+import com.nothingbuds.ui.theme.AmbientBackground
+import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.glassCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -105,7 +110,8 @@ fun ExtrasScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        }
+        },
+        containerColor = Color.Transparent,
     ) { padding ->
         if (!state.isConnected) {
             Box(
@@ -127,10 +133,15 @@ fun ExtrasScreen(
 
         val model = state.deviceModel
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+        ) {
+            AmbientBackground()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
             // Per-model gating follows the official app: unknown devices get the common extras,
@@ -243,7 +254,7 @@ fun ExtrasScreen(
                     subtitle = "Experimental listening test",
                     icon = Icons.Default.Info,
                 ) {
-                    Switch(
+                    LiquidToggle(
                         checked = state.calibrationEnabled,
                         onCheckedChange = onToggleCalibration,
                     )
@@ -279,6 +290,7 @@ fun ExtrasScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+        }
         }
     }
 }
@@ -381,11 +393,13 @@ private fun SectionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .glassCard(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = LiquidTheme.GlassBg,
         ),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = LiquidTheme.CardShape,
+        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

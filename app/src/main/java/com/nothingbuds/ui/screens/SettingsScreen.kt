@@ -36,6 +36,7 @@ import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.data.CompanionPairing
 import com.nothingbuds.qs.AncTileService
 import com.nothingbuds.service.BudsService
+import com.nothingbuds.ui.components.LiquidToggle
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -352,7 +353,7 @@ private fun SettingsSwitch(
             )
         }
 
-        Switch(
+        LiquidToggle(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
