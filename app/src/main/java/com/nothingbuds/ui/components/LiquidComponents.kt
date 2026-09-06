@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,39 +37,74 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.LocalAppBackdrop
+import com.nothingbuds.ui.theme.liquidGlass
 import kotlin.math.roundToInt
 
 @Composable
-fun LiquidToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun LiquidToggle(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    backdrop: LayerBackdrop? = LocalAppBackdrop.current,
+) {
     val thumbX by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         animationSpec = LiquidTheme.SpringSpec,
         label = "thumb"
     )
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 1.06f else 1f,
+        animationSpec = LiquidTheme.SpringSpec,
+        label = "press"
+    )
     Box(
         modifier = Modifier
             .size(52.dp, 32.dp)
-            .background(
-                brush = if (checked) Brush.linearGradient(
-                    colors = listOf(Color(0xD9FF7135), Color(0xBEFF5B2A))
-                ) else Brush.linearGradient(
-                    colors = listOf(Color(0x14FFFFFF), Color(0x06FFFFFF))
-                ),
-                shape = LiquidTheme.PillShape
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(backdrop, CircleShape)
+                else Modifier.background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0x14FFFFFF), Color(0x06FFFFFF))
+                    ),
+                    shape = LiquidTheme.PillShape
+                )
+            )
+            .then(
+                if (checked) Modifier.background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            LiquidTheme.Accent.copy(alpha = 0.85f),
+                            Color(0xBEFF5B2A)
+                        )
+                    ),
+                    shape = LiquidTheme.PillShape
+                ) else Modifier
             )
             .border(
                 1.dp,
                 if (checked) Color(0x66FFA680) else LiquidTheme.GlassBorder,
                 LiquidTheme.PillShape
             )
-            .clickable(onClick = { onCheckedChange(!checked) })
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = { onCheckedChange(!checked) }
+            )
             .padding(3.dp)
     ) {
         Canvas(
