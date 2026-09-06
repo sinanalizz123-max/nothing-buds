@@ -8,7 +8,7 @@ import android.companion.CompanionDeviceManager
 import android.content.Context
 import android.content.IntentSender
 import android.os.Build
-import android.util.Log
+import com.nothingbuds.util.AppLog
 import androidx.annotation.RequiresApi
 
 /**
@@ -100,7 +100,7 @@ object CompanionPairing {
         val manager = context.getSystemService(CompanionDeviceManager::class.java) ?: return
         associations(context).forEach { address ->
             runCatching { manager.startObservingDevicePresence(address) }
-                .onFailure { Log.w(TAG, "Cannot observe $address", it) }
+                .onFailure { AppLog.w(TAG, "Cannot observe $address", it) }
         }
     }
 

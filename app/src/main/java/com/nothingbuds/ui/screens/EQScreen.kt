@@ -1,6 +1,6 @@
 package com.nothingbuds.ui.screens
 
-import android.util.Log
+import com.nothingbuds.util.AppLog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -46,20 +46,20 @@ fun EQScreen(
         (!isDirac || DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM)
 
     LaunchedEffect(Unit) {
-        Log.d("EQ_UI", "[EQ_UI] screen opened model=${state.deviceModel?.id} " +
+        AppLog.d("EQ_UI", "[EQ_UI] screen opened model=${state.deviceModel?.id} " +
             "diracCapable=$isDirac eqPreset=${state.eqPreset} diracEq=${state.diracEq} " +
             "selected=$selectedLabel")
     }
     DisposableEffect(Unit) {
         onDispose {
-            Log.d("EQ_UI", "[EQ_UI] screen leaves model=${state.deviceModel?.id}")
+            AppLog.d("EQ_UI", "[EQ_UI] screen leaves model=${state.deviceModel?.id}")
         }
     }
     LaunchedEffect(selectedLabel) {
-        Log.d("EQ_UI", "[EQ_UI] UI selection updated=$selectedLabel")
+        AppLog.d("EQ_UI", "[EQ_UI] UI selection updated=$selectedLabel")
     }
     LaunchedEffect(customVisible) {
-        Log.d("EQ_UI", "[EQ_UI] Custom panel visible=$customVisible")
+        AppLog.d("EQ_UI", "[EQ_UI] Custom panel visible=$customVisible")
     }
 
     Scaffold(
@@ -109,15 +109,15 @@ fun EQScreen(
                             val aid = nextAid()
                             val prev = DiracEqPreset.fromLevel(state.diracEq)
                             val index = diracRowOrder.indexOf(preset)
-                            Log.d("EQ_UI", "[EQ][$aid] User selected ${diracRowName(preset)}")
-                            Log.d("EQ_UI", "[EQ][$aid] previous=${diracRowName(prev)} " +
+                            AppLog.d("EQ_UI", "[EQ][$aid] User selected ${diracRowName(preset)}")
+                            AppLog.d("EQ_UI", "[EQ][$aid] previous=${diracRowName(prev)} " +
                                 "requested=${diracRowName(preset)} type=${preset.type} " +
                                 "index=$index changed=${prev != preset}")
                             if (preset == DiracEqPreset.OPTEO && state.lhdc) {
                                 // Matches the official app: tapping Dirac while LDAC is on
                                 // shows the "…is unavailable while LDAC is on" dialog and does not
                                 // send anything to the earbuds.
-                                Log.d("EQ_UI", "[EQ][$aid] Dirac row blocked by LDAC (no TX)")
+                                AppLog.d("EQ_UI", "[EQ][$aid] Dirac row blocked by LDAC (no TX)")
                                 showDiracUnavailable = true
                             } else {
                                 onSetDiracEq(preset.type, aid)
@@ -135,8 +135,8 @@ fun EQScreen(
                         onClick = {
                             val aid = nextAid()
                             val index = EqPreset.entries.indexOf(preset)
-                            Log.d("EQ_UI", "[EQ][$aid] User selected ${getPresetDisplayName(preset)}")
-                            Log.d("EQ_UI", "[EQ][$aid] previous=${getPresetDisplayName(state.eqPreset)} " +
+                            AppLog.d("EQ_UI", "[EQ][$aid] User selected ${getPresetDisplayName(preset)}")
+                            AppLog.d("EQ_UI", "[EQ][$aid] previous=${getPresetDisplayName(state.eqPreset)} " +
                                 "requested=${getPresetDisplayName(preset)} " +
                                 "index=$index changed=${state.eqPreset != preset}")
                             onSetPreset(preset, aid)
@@ -189,13 +189,13 @@ fun EQScreen(
                                                 diracBands = diracBands.copyOf().also {
                                                     it[index] = newValue
                                                 }
-                                                Log.d("EQ_UI", "[EQ_UI] Dirac Custom $label: $old -> $newValue " +
+                                                AppLog.d("EQ_UI", "[EQ_UI] Dirac Custom $label: $old -> $newValue " +
                                                     "current={bass=${diracBands[0]},mid=${diracBands[1]},treble=${diracBands[2]}} " +
                                                     "atLimit=${newValue == 6 || newValue == -6}")
                                             },
                                             onValueChangeFinished = {
                                                 val aid = nextAid()
-                                                Log.d("EQ_UI", "[EQ][$aid] Dirac Custom action " +
+                                                AppLog.d("EQ_UI", "[EQ][$aid] Dirac Custom action " +
                                                     "current={bass=${diracBands[0]},mid=${diracBands[1]},treble=${diracBands[2]}}")
                                                 onSetDiracCustomEq(diracBands[0], diracBands[1], diracBands[2], aid)
                                             }
@@ -219,7 +219,7 @@ fun EQScreen(
                                 onClick = {
                                     val aid = nextAid()
                                     diracBands = IntArray(3) { 0 }
-                                    Log.d("EQ_UI", "[EQ][$aid] Dirac Custom reset current={bass=0,mid=0,treble=0}")
+                                    AppLog.d("EQ_UI", "[EQ][$aid] Dirac Custom reset current={bass=0,mid=0,treble=0}")
                                     onSetDiracCustomEq(0, 0, 0, aid)
                                 },
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -246,12 +246,12 @@ fun EQScreen(
                                                 customBands = customBands.copyOf().also {
                                                     it[index] = newValue
                                                 }
-                                                Log.d("EQ_UI", "[EQ_UI] Advanced Custom band $index ($freq): " +
+                                                AppLog.d("EQ_UI", "[EQ_UI] Advanced Custom band $index ($freq): " +
                                                     "$old -> $newValue atLimit=${newValue == 6 || newValue == -6}")
                                             },
                                             onValueChangeFinished = {
                                                 val aid = nextAid()
-                                                Log.d("EQ_UI", "[EQ][$aid] Advanced Custom action " +
+                                                AppLog.d("EQ_UI", "[EQ][$aid] Advanced Custom action " +
                                                     "current={${customBands.joinToString()}}")
                                                 onSetCustomEq(customBands, aid)
                                             }
@@ -276,7 +276,7 @@ fun EQScreen(
                                 onClick = {
                                     val aid = nextAid()
                                     customBands = IntArray(8) { 0 }
-                                    Log.d("EQ_UI", "[EQ][$aid] Advanced Custom reset")
+                                    AppLog.d("EQ_UI", "[EQ][$aid] Advanced Custom reset")
                                     onSetCustomEq(customBands, aid)
                                 },
                                 modifier = Modifier.align(Alignment.CenterHorizontally)

@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
+import com.nothingbuds.util.AppLog
 import androidx.core.app.ActivityCompat
 import com.nothingbuds.data.DeviceModels
 
@@ -34,7 +34,7 @@ class BluetoothConnectionReceiver : BroadcastReceiver() {
 
         when (intent.action) {
             BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                Log.d(TAG, "Earbuds connected: $name")
+                AppLog.d(TAG, "Earbuds connected: $name")
                 val serviceIntent = Intent(context, BudsService::class.java).apply {
                     action = BudsService.ACTION_CONNECT
                     putExtra(BudsService.EXTRA_DEVICE_ADDRESS, device.address)
@@ -45,11 +45,11 @@ class BluetoothConnectionReceiver : BroadcastReceiver() {
                     } else {
                         context.startService(serviceIntent)
                     }
-                }.onFailure { Log.w(TAG, "Could not start service from background", it) }
+                }.onFailure { AppLog.w(TAG, "Could not start service from background", it) }
             }
 
             BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                Log.d(TAG, "Earbuds disconnected: $name")
+                AppLog.d(TAG, "Earbuds disconnected: $name")
                 runCatching {
                     context.startService(
                         Intent(context, BudsService::class.java)
