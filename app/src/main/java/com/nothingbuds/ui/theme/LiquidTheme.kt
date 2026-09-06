@@ -4,8 +4,11 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
@@ -13,7 +16,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 
 /**
  * Liquid Glass design tokens converted from the approved HTML mockup
@@ -61,15 +73,89 @@ fun AmbientBackground(modifier: Modifier = Modifier) {
     ) {
         val w = size.width
         val h = size.height
-        drawCircle(
-            Color(0x26FF7135),
-            radius = w * 0.35f,
-            center = Offset(w * 0.15f, h * 0.2f)
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(Color(0xFF0B0710), Color(0xFF050508), Color(0xFF0A0612))
+            )
         )
         drawCircle(
-            Color(0x1F5E5CE6),
-            radius = w * 0.35f,
-            center = Offset(w * 0.85f, h * 0.8f)
+            Color(0x40FF7135),
+            radius = w * 0.38f,
+            center = Offset(w * 0.12f, h * 0.16f)
         )
+        drawCircle(
+            Color(0x335E5CE6),
+            radius = w * 0.38f,
+            center = Offset(w * 0.88f, h * 0.82f)
+        )
+        drawCircle(
+            Color(0x1FB14AED),
+            radius = w * 0.3f,
+            center = Offset(w * 0.55f, h * 0.5f)
+        )
+    }
+}
+
+/**
+ * Backdrop every liquid-glass surface on a screen samples from.
+ * Glass surfaces must be SIBLINGS of the source node carrying
+ * [appBackdropSource], never its descendants (render-feedback loop).
+ */
+val LocalAppBackdrop = compositionLocalOf<LayerBackdrop?> { null }
+
+@Composable
+fun rememberAppBackdrop(): LayerBackdrop = rememberLayerBackdrop {
+    drawRect(Color(0xFF050508))
+    drawContent()
+}
+
+fun Modifier.appBackdropSource(backdrop: LayerBackdrop): Modifier =
+    this.layerBackdrop(backdrop)
+
+/**
+ * Real backdrop-refraction glass modeled on SimpMusic's liquid-glass primitive:
+ * vibrancy + neutral color controls + luminance blur + lens refraction, finished
+ * with a dark scrim so content stays legible.
+ */
+fun Modifier.liquidGlass(
+    backdrop: LayerBackdrop,
+    shape: Shape,
+): Modifier = this.drawBackdrop(
+    backdrop = backdrop,
+    shape = { shape },
+    effects = {
+        vibrancy()
+        colorControls(
+            brightness = 0.05f,
+            contrast = 1f,
+            saturation = 1.5f,
+        )
+        blur(12.dp.toPx())
+        lens(size.minDimension / 4f, size.minDimension / 2f, false)
+    },
+    onDrawSurface = {
+        drawRect(Color.Black.copy(alpha = 0.28f))
+    },
+)
+
+/**
+ * Screen root: records the ambient background into a shared backdrop layer and
+ * provides it to glass descendants. Content must NOT draw the background itself
+ * (it is already in the recorded layer).
+ */
+@Composable
+fun GlassScreenRoot(content: @Composable () -> Unit) {
+    val backdrop = rememberAppBackdrop()
+    CompositionLocalProvider(LocalAppBackdrop provides backdrop) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .appBackdropSource(backdrop)
+            ) {
+                AmbientBackground()
+            }
+            content()
+        }
     }
 }

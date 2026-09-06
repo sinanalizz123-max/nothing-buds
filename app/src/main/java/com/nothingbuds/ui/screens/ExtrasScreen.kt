@@ -46,9 +46,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.graphics.Color
 import com.nothingbuds.ui.components.LiquidToggle
-import com.nothingbuds.ui.theme.AmbientBackground
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.nothingbuds.ui.theme.GlassScreenRoot
 import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.LocalAppBackdrop
 import com.nothingbuds.ui.theme.glassCard
+import com.nothingbuds.ui.theme.liquidGlass
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -97,6 +100,7 @@ fun ExtrasScreen(
         }
     }
 
+    GlassScreenRoot {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -138,7 +142,6 @@ fun ExtrasScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            AmbientBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -293,6 +296,7 @@ fun ExtrasScreen(
         }
         }
     }
+    }
 }
 
 /** Two options pickers share this mapping with [GestureScreen]. */
@@ -390,13 +394,17 @@ private fun SectionCard(
     icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val backdrop = LocalAppBackdrop.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .glassCard(),
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
+                else Modifier.glassCard()
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
         ),
         shape = LiquidTheme.CardShape,
         border = BorderStroke(1.dp, LiquidTheme.GlassBorder),

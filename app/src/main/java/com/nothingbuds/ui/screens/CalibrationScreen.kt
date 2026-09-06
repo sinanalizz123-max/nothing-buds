@@ -22,7 +22,7 @@ import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.AncMode
 import com.nothingbuds.ui.components.GlassButton
 import com.nothingbuds.ui.components.ProgressRing
-import com.nothingbuds.ui.theme.AmbientBackground
+import com.nothingbuds.ui.theme.GlassScreenRoot
 
 private enum class CalibrationStep { INSTRUCTIONS, TESTING, RESULT }
 
@@ -84,6 +84,7 @@ fun CalibrationScreen(
         }
     }
 
+    GlassScreenRoot {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -105,7 +106,6 @@ fun CalibrationScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            AmbientBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -288,6 +288,7 @@ fun CalibrationScreen(
             }
         }
         }
+    }
     }
 }
 

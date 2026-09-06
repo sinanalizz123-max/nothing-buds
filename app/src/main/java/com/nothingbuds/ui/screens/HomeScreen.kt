@@ -53,8 +53,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.ui.graphics.Color
 import com.nothingbuds.ui.components.LiquidToggle
 import com.nothingbuds.ui.components.SpringSegmentedControl
-import com.nothingbuds.ui.theme.AmbientBackground
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.nothingbuds.ui.theme.GlassScreenRoot
 import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.LocalAppBackdrop
+import com.nothingbuds.ui.theme.liquidGlass
 import com.nothingbuds.ui.theme.glassCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,6 +123,7 @@ fun HomeScreen(
         rememberTopAppBarState()
     )
 
+    GlassScreenRoot {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = Color.Transparent,
@@ -152,7 +156,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            AmbientBackground()
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -203,19 +206,26 @@ fun HomeScreen(
         }
         }
     }
+    }
 }
 
 // ---- Battery ---------------------------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun BatteryCard(state: EarbudsState) {
+private fun BatteryCard(
+    state: EarbudsState,
+) {
+    val backdrop = LocalAppBackdrop.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassCard(),
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
+                else Modifier.glassCard()
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
         ),
         shape = LiquidTheme.CardShape,
         border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
@@ -784,12 +794,16 @@ private fun SectionCard(
     icon: ImageVector,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
+    val backdrop = LocalAppBackdrop.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .glassCard(),
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
+                else Modifier.glassCard()
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
         ),
         shape = LiquidTheme.CardShape,
         border = BorderStroke(1.dp, LiquidTheme.GlassBorder),

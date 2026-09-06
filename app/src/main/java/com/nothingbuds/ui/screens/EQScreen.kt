@@ -18,9 +18,11 @@ import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.ui.components.EqDragSlider
-import com.nothingbuds.ui.theme.AmbientBackground
+import com.nothingbuds.ui.theme.GlassScreenRoot
 import com.nothingbuds.ui.theme.LiquidTheme
+import com.nothingbuds.ui.theme.LocalAppBackdrop
 import com.nothingbuds.ui.theme.glassCard
+import com.nothingbuds.ui.theme.liquidGlass
 import kotlin.math.roundToInt
 
 internal fun eqTileColumns(maxWidthDp: Int): Int = (maxWidthDp / 112).coerceIn(2, 4)
@@ -56,6 +58,7 @@ fun EQScreen(
     var showDiracUnavailable by remember { mutableStateOf(false) }
     val myEqShown = showMyEqTile(isDirac, state.calibrationEnabled, state.myEq)
 
+    GlassScreenRoot {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,7 +80,6 @@ fun EQScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            AmbientBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -173,9 +175,13 @@ fun EQScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .glassCard(),
+                        .then(
+                            LocalAppBackdrop.current?.let { Modifier.liquidGlass(it, LiquidTheme.CardShape) }
+                                ?: Modifier.glassCard()
+                        ),
                     colors = CardDefaults.cardColors(
-                        containerColor = LiquidTheme.GlassBg
+                        containerColor = if (LocalAppBackdrop.current != null) Color.Transparent
+                        else LiquidTheme.GlassBg
                     ),
                     border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
                 ) {
@@ -289,6 +295,7 @@ fun EQScreen(
         }
         }
     }
+    }
 
     if (showDiracUnavailable) {
         AlertDialog(
@@ -349,9 +356,13 @@ private fun EqPresetTile(
     Card(
         modifier = modifier
             .padding(vertical = 0.dp)
-            .glassCard(),
+            .then(
+                LocalAppBackdrop.current?.let { Modifier.liquidGlass(it, LiquidTheme.CardShape) }
+                    ?: Modifier.glassCard()
+            ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) LiquidTheme.AccentGlow
+            containerColor = if (LocalAppBackdrop.current != null) Color.Transparent
+            else if (isSelected) LiquidTheme.AccentGlow
             else LiquidTheme.GlassBg
         ),
         border = BorderStroke(
