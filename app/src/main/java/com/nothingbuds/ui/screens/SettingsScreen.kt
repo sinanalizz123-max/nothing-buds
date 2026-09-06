@@ -356,7 +356,7 @@ private fun SettingsItem(
 private suspend fun exportLogs(context: Context) {
     val appTags = setOf(
         "BudsService", "MainActivity", "NothingBudsApp", "BudsCompanionService",
-        "BootReceiver", "BluetoothConnectionReceiver", "AncTileService"
+        "BootReceiver", "BluetoothConnectionReceiver", "AncTileService", "EQ_UI"
     )
 
     val body = withContext(kotlinx.coroutines.Dispatchers.IO) {
