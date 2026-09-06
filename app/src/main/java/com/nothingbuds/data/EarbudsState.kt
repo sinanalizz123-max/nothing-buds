@@ -32,6 +32,12 @@ data class EarbudsState(
     val diracEq: Int = 0,
     /** Dirac Custom curve gains in dB (-6..+6): Bass, Mid, Treble. Dirac models only. */
     val diracCustomEq: IntArray = IntArray(3) { 0 },
+    /** Personal Sound Calibration experiment switch (Extra Features). */
+    val calibrationEnabled: Boolean = false,
+    /** Generated My EQ profile gains (Bass, Mid, Treble), null when none exists. */
+    val myEq: IntArray? = null,
+    /** True while the generated My EQ profile is the active custom curve. */
+    val myEqActive: Boolean = false,
     val lhdc: Boolean = false,
     /** 0 means the earbuds never power themselves off. */
     val autoPowerOffMinutes: Int = 0,
@@ -68,6 +74,10 @@ data class EarbudsState(
                 dualDevices == other.dualDevices &&
                 diracEq == other.diracEq &&
                 diracCustomEq.contentEquals(other.diracCustomEq) &&
+                calibrationEnabled == other.calibrationEnabled &&
+                (myEq == null) == (other.myEq == null) &&
+                (myEq == null || myEq.contentEquals(other.myEq!!)) &&
+                myEqActive == other.myEqActive &&
                 lhdc == other.lhdc &&
                 autoPowerOffMinutes == other.autoPowerOffMinutes &&
                 caseLedColor == other.caseLedColor &&
@@ -98,6 +108,9 @@ data class EarbudsState(
         result = 31 * result + dualDevices.hashCode()
         result = 31 * result + diracEq
         result = 31 * result + diracCustomEq.contentHashCode()
+        result = 31 * result + calibrationEnabled.hashCode()
+        result = 31 * result + (myEq?.contentHashCode() ?: 0)
+        result = 31 * result + myEqActive.hashCode()
         result = 31 * result + lhdc.hashCode()
         result = 31 * result + autoPowerOffMinutes
         result = 31 * result + caseLedColor

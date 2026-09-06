@@ -11,11 +11,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.ui.theme.NothingRed
+import kotlin.math.roundToInt
+
+internal fun eqTileColumns(maxWidthDp: Int): Int = (maxWidthDp / 112).coerceIn(2, 4)
+
+internal fun showMyEqTile(isDirac: Boolean, calibrationEnabled: Boolean, myEq: IntArray?): Boolean =
+    isDirac && calibrationEnabled && myEq != null
+
+internal fun eqRowSubtitle(
+    isDirac: Boolean,
+    diracEq: Int,
+    eqPresetName: String,
+    myEqShown: Boolean
+): String = when {
+    myEqShown -> "My EQ"
+    isDirac -> DiracEqPreset.fromLevel(diracEq).displayName
+    else -> eqPresetName
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,12 +43,14 @@ fun EQScreen(
     onSetDiracEq: (Int) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
     onSetDiracCustomEq: (Int, Int, Int) -> Unit,
+    onApplyMyEq: () -> Unit,
     onBack: () -> Unit
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
     var diracBands by remember { mutableStateOf(state.diracCustomEq.copyOf()) }
     val isDirac = state.deviceModel?.hasDiracEq == true
     var showDiracUnavailable by remember { mutableStateOf(false) }
+    val myEqShown = showMyEqTile(isDirac, state.calibrationEnabled, state.myEq)
 
     Scaffold(
         topBar = {
@@ -55,11 +75,6 @@ fun EQScreen(
                 .padding(16.dp)
         ) {
             Text(
-                "Equalizer",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            Text(
                 "Pick a preset; the earbuds apply the curve instantly.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -69,34 +84,68 @@ fun EQScreen(
             if (isDirac) {
                 // One EQ list on Dirac-capable models (B172/B168): Dirac is simply the
                 // first preset. Every row writes through SET_DIRAC_EQ (0xF01D).
-                diracRowOrder.forEach { preset ->
-                    EqPresetRow(
-                        name = diracRowName(preset),
-                        description = getDiracPresetDescription(preset),
-                        isSelected = DiracEqPreset.fromLevel(state.diracEq) == preset,
-                        enabled = true,
-                        onClick = {
-                            if (preset == DiracEqPreset.OPTEO && state.lhdc) {
-                                // Matches the official app: tapping Dirac while LDAC is on
-                                // shows the "…is unavailable while LDAC is on" dialog and does not
-                                // send anything to the earbuds.
-                                showDiracUnavailable = true
-                            } else {
-                                onSetDiracEq(preset.type)
+                val selected = DiracEqPreset.fromLevel(state.diracEq)
+                EqTileGrid(
+                    tiles = diracRowOrder.filter { it != DiracEqPreset.CUSTOM }.map { preset ->
+                        EqTileData(
+                            label = diracRowName(preset),
+                            description = getDiracPresetDescription(preset),
+                            isSelected = selected == preset,
+                            onClick = {
+                                if (preset == DiracEqPreset.OPTEO && state.lhdc) {
+                                    // Matches the official app: tapping Dirac while LDAC is on
+                                    // shows the "…is unavailable while LDAC is on" dialog and does
+                                    // not send anything to the earbuds.
+                                    showDiracUnavailable = true
+                                } else {
+                                    onSetDiracEq(preset.type)
+                                }
                             }
-                        }
+                        )
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    EqPresetTile(
+                        label = diracRowName(DiracEqPreset.CUSTOM),
+                        description = getDiracPresetDescription(DiracEqPreset.CUSTOM),
+                        isSelected = selected == DiracEqPreset.CUSTOM && !state.myEqActive,
+                        onClick = { onSetDiracEq(DiracEqPreset.CUSTOM.type) },
+                        modifier = Modifier.weight(if (myEqShown) 2f else 1f)
                     )
+                    if (myEqShown) {
+                        EqPresetTile(
+                            label = "My EQ",
+                            description = "Your calibration profile",
+                            isSelected = state.myEqActive,
+                            onClick = onApplyMyEq,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             } else {
-                EqPreset.entries.forEach { preset ->
-                    EqPresetRow(
-                        name = getPresetDisplayName(preset),
-                        description = getPresetDescription(preset),
-                        isSelected = state.eqPreset == preset,
-                        enabled = true,
-                        onClick = { onSetPreset(preset) }
-                    )
-                }
+                val regular = EqPreset.entries.filter { it != EqPreset.CUSTOM }
+                EqTileGrid(
+                    tiles = regular.map { preset ->
+                        EqTileData(
+                            label = getPresetDisplayName(preset),
+                            description = getPresetDescription(preset),
+                            isSelected = state.eqPreset == preset,
+                            onClick = { onSetPreset(preset) }
+                        )
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                EqPresetTile(
+                    label = getPresetDisplayName(EqPreset.CUSTOM),
+                    description = getPresetDescription(EqPreset.CUSTOM),
+                    isSelected = state.eqPreset == EqPreset.CUSTOM,
+                    onClick = { onSetPreset(EqPreset.CUSTOM) },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -239,75 +288,81 @@ fun EQScreen(
     }
 }
 
+private data class EqTileData(
+    val label: String,
+    val description: String,
+    val isSelected: Boolean,
+    val onClick: () -> Unit
+)
+
 @Composable
-private fun EqPresetRow(
-    name: String,
-    description: String,
-    isSelected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    val contentColor = if (enabled) MaterialTheme.colorScheme.onSurface
-    else MaterialTheme.colorScheme.onSurfaceVariant
-
-    val itemContent: @Composable ColumnScope.() -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                enabled = enabled,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = NothingRed,
-                    disabledSelectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    disabledUnselectedColor = MaterialTheme.colorScheme.outlineVariant
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = contentColor
-                )
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+private fun EqTileGrid(tiles: List<EqTileData>) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val columns = eqTileColumns(maxWidth.value.roundToInt())
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            tiles.chunked(columns).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    row.forEach { tile ->
+                        EqPresetTile(
+                            label = tile.label,
+                            description = tile.description,
+                            isSelected = tile.isSelected,
+                            onClick = tile.onClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    repeat(columns - row.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
+}
 
-    val containerColor = when {
-        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        isSelected -> NothingRed.copy(alpha = 0.2f)
-        else -> MaterialTheme.colorScheme.surface
-    }
-
-    if (enabled) {
-        Card(
+@Composable
+private fun EqPresetTile(
+    label: String,
+    description: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(vertical = 0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) NothingRed.copy(alpha = 0.2f)
+            else MaterialTheme.colorScheme.surface
+        ),
+        onClick = onClick
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = containerColor),
-            onClick = onClick,
-            content = itemContent
-        )
-    } else {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = containerColor),
-            content = itemContent
-        )
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                description,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -322,14 +377,14 @@ private fun EqBandSlider(
     ) {
         Text(
             "${if (value > 0) "+" else ""}$value",
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleMedium,
             color = if (value != 0) NothingRed else MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .height(120.dp),
+                .width(48.dp)
+                .height(200.dp),
             contentAlignment = Alignment.Center
         ) {
             Slider(
@@ -339,8 +394,8 @@ private fun EqBandSlider(
                 valueRange = -6f..6f,
                 steps = 11,
                 modifier = Modifier
-                    .width(120.dp)
-                    .height(36.dp)
+                    .width(180.dp)
+                    .height(44.dp)
                     .graphicsLayer { rotationZ = 90f },
                 colors = SliderDefaults.colors(
                     thumbColor = NothingRed,

@@ -1,8 +1,10 @@
 package com.nothingbuds.ui.screens
 
+import android.Manifest
 import android.app.Activity
 import android.app.StatusBarManager
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.content.Context
 import android.net.Uri
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.nothingbuds.R
 import com.nothingbuds.data.BudsRepository
@@ -51,6 +54,32 @@ fun SettingsScreen(
     var autoConnect by remember { mutableStateOf(prefs.getBoolean("auto_connect", true)) }
     var showNotification by remember { mutableStateOf(prefs.getBoolean("show_notification", true)) }
     var isAssociated by remember { mutableStateOf(CompanionPairing.isAssociated(context)) }
+    var showNotifRationale by remember { mutableStateOf(false) }
+
+    fun hasNotifPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+    fun applyHub(enabled: Boolean) {
+        showNotification = enabled
+        prefs.edit().putBoolean("show_notification", enabled).apply()
+        // Repost immediately instead of waiting for the next state change.
+        runCatching {
+            context.startService(
+                Intent(context, BudsService::class.java)
+                    .setAction(BudsService.ACTION_REFRESH_NOTIFICATION)
+            )
+        }
+    }
+
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // A denial must not crash anything or falsely enable the hub.
+        applyHub(granted)
+    }
 
     // The system device picker hands back an IntentSender we have to launch ourselves.
     val associationLauncher = rememberLauncherForActivityResult(
@@ -109,16 +138,31 @@ fun SettingsScreen(
                     icon = Icons.Default.Notifications,
                     checked = showNotification,
                     onCheckedChange = { enabled ->
-                        showNotification = enabled
-                        prefs.edit().putBoolean("show_notification", enabled).apply()
-                        // Repost immediately instead of waiting for the next state change.
-                        runCatching {
-                            context.startService(
-                                Intent(context, BudsService::class.java)
-                                    .setAction(BudsService.ACTION_REFRESH_NOTIFICATION)
-                            )
+                        if (enabled && !hasNotifPermission()) {
+                            // The hub needs notification permission to be visible:
+                            // explain why before requesting.
+                            showNotifRationale = true
+                        } else {
+                            applyHub(enabled)
                         }
                     }
+                )
+            }
+
+            if (showNotifRationale) {
+                AlertDialog(
+                    onDismissRequest = { showNotifRationale = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showNotifRationale = false
+                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }) { Text("Allow Notifications") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showNotifRationale = false }) { Text("Not Now") }
+                    },
+                    title = { Text("Notifications permission") },
+                    text = { Text("This feature uses notifications to let you know when an action or background operation needs your attention.") }
                 )
             }
 

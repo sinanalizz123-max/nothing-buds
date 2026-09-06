@@ -26,8 +26,10 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.nothingbuds.calibration.NotificationPermission
 import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.service.BudsService
+import com.nothingbuds.ui.screens.CalibrationScreen
 import com.nothingbuds.ui.screens.DeviceListScreen
 import com.nothingbuds.ui.screens.EQScreen
 import com.nothingbuds.ui.screens.ExtrasScreen
@@ -77,6 +79,8 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
+        getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean(NotificationPermission.PREF_ASKED, true).apply()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,6 +164,18 @@ class MainActivity : ComponentActivity() {
                                 onSetDiracEq = { level -> budsService?.setDiracEq(level) },
                                 onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
                                 onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
+                                onApplyMyEq = { budsService?.applyMyEq() },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable("calibration") {
+                            CalibrationScreen(
+                                state = state,
+                                onSetAncMode = { mode -> budsService?.setAncMode(mode) },
+                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
+                                onSaveMyEq = { bass, mid, treble -> budsService?.saveMyEq(bass, mid, treble) },
+                                onApplyMyEq = { budsService?.applyMyEq() },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -180,6 +196,8 @@ class MainActivity : ComponentActivity() {
                                 onSetCaseLedColor = { color -> budsService?.setCaseLedColor(color) },
                                 onStartFitTest = { budsService?.startFitTest() },
                                 onNavigateToEq = { navController.navigate("eq") },
+                                onToggleCalibration = { enabled -> budsService?.setPersonalSoundCalibration(enabled) },
+                                onNavigateToCalibration = { navController.navigate("calibration") },
                             )
                         }
 
@@ -239,8 +257,17 @@ class MainActivity : ComponentActivity() {
         }
 
         // Notification permission is independent: it only affects whether the foreground-service
-        // notification is visible and must not gate Bluetooth functionality.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        // notification is visible and must not gate Bluetooth functionality. Asked once;
+        // a denial never blocks the app.
+        val notifGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val prefs = getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+        if (NotificationPermission.shouldRequest(
+                Build.VERSION.SDK_INT, notifGranted,
+                prefs.getBoolean(NotificationPermission.PREF_ASKED, false)
+            )
+        ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }

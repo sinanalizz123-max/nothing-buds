@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.CallSplit
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -73,6 +74,8 @@ fun ExtrasScreen(
     onSetCaseLedColor: (Int) -> Unit,
     onStartFitTest: () -> Unit,
     onNavigateToEq: () -> Unit,
+    onToggleCalibration: (Boolean) -> Unit,
+    onNavigateToCalibration: () -> Unit,
 ) {
     val context = LocalContext.current
     val bluetoothAdapter = remember {
@@ -230,6 +233,25 @@ fun ExtrasScreen(
                                 onClick = { onSetCaseLedColor(color) },
                             )
                         }
+                    }
+                }
+            }
+
+            SectionCard("Experimental", Icons.Default.Info) {
+                SettingRow(
+                    title = "Personal Sound Calibration",
+                    subtitle = "Experimental listening test",
+                    icon = Icons.Default.Info,
+                ) {
+                    Switch(
+                        checked = state.calibrationEnabled,
+                        onCheckedChange = onToggleCalibration,
+                    )
+                }
+                if (state.calibrationEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = onNavigateToCalibration) {
+                        Text("Start calibration")
                     }
                 }
             }

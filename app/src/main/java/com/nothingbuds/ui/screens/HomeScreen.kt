@@ -3,6 +3,7 @@ package com.nothingbuds.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -439,15 +440,24 @@ private fun SoundCard(
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
-            subtitle = if (state.deviceModel?.hasDiracEq == true) {
-                // One EQ list on Dirac models: the C050 level selects the row.
-                DiracEqPreset.fromLevel(state.diracEq).displayName
-            } else {
-                state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() }
-            },
+            subtitle = eqRowSubtitle(
+                isDirac = state.deviceModel?.hasDiracEq == true,
+                diracEq = state.diracEq,
+                eqPresetName = state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() },
+                myEqShown = state.myEqActive && state.calibrationEnabled && state.myEq != null
+            ),
             icon = Icons.Default.Equalizer,
+            onClick = onNavigateToEQ,
         ) {
-            FilledTonalButton(onClick = onNavigateToEQ) { Text("Adjust") }
+            Text(
+                eqRowSubtitle(
+                    isDirac = state.deviceModel?.hasDiracEq == true,
+                    diracEq = state.diracEq,
+                    eqPresetName = state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() },
+                    myEqShown = state.myEqActive && state.calibrationEnabled && state.myEq != null
+                ),
+                style = MaterialTheme.typography.titleMedium
+            )
         }
 
         val model = state.deviceModel
@@ -795,10 +805,13 @@ private fun SettingRow(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    onClick: (() -> Unit)? = null,
     trailing: @Composable () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().then(
+            if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

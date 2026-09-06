@@ -1074,13 +1074,13 @@ class BudsService : Service() {
         // Standard equalizer models only (0xF010). Dirac-capable models (B172/B168) run
         // their whole preset list through setDiracEq() (0xF01D) instead.
         sendCommand(PacketBuilder.setEq(preset))
-        updateState { it.copy(eqPreset = preset) }
+        updateState { it.copy(eqPreset = preset, myEqActive = false) }
     }
 
     fun setCustomEq(bands: IntArray) {
         Log.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
         sendCommand(PacketBuilder.setCustomEq(bands))
-        updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
+        updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM, myEqActive = false) }
     }
 
     fun setInEarDetection(enabled: Boolean) {
@@ -1139,13 +1139,32 @@ class BudsService : Service() {
     fun setDiracEq(level: Int) {
         Log.d(TAG, "Setting Dirac EQ: $level")
         sendCommand(PacketBuilder.setDiracEq(level))
-        updateState { it.copy(diracEq = level) }
+        updateState { it.copy(diracEq = level, myEqActive = false) }
     }
 
     fun setDiracCustomEq(bass: Int, mid: Int, treble: Int) {
         Log.d(TAG, "Setting Dirac custom EQ: bass=$bass mid=$mid treble=$treble")
         sendCommand(PacketBuilder.setDiracCustomEq(bass, mid, treble))
-        updateState { it.copy(diracCustomEq = intArrayOf(bass, mid, treble)) }
+        updateState { it.copy(diracCustomEq = intArrayOf(bass, mid, treble), myEqActive = false) }
+    }
+
+    fun setPersonalSoundCalibration(enabled: Boolean) {
+        Log.d(TAG, "Setting personal sound calibration: $enabled")
+        updateState { it.copy(calibrationEnabled = enabled) }
+    }
+
+    fun saveMyEq(bass: Int, mid: Int, treble: Int) {
+        Log.d(TAG, "Saving My EQ: bass=$bass mid=$mid treble=$treble")
+        updateState { it.copy(myEq = intArrayOf(bass, mid, treble), myEqActive = false) }
+    }
+
+    /** Applies the stored My EQ profile through the existing Dirac Custom mechanism. */
+    fun applyMyEq() {
+        val profile = BudsRepository.state.value.myEq ?: return
+        Log.d(TAG, "Applying My EQ: ${profile.joinToString()}")
+        setDiracEq(DiracEqPreset.CUSTOM.type)
+        setDiracCustomEq(profile[0], profile[1], profile[2])
+        updateState { it.copy(myEqActive = true) }
     }
 
     fun setLhdc(enabled: Boolean) {
@@ -1321,6 +1340,9 @@ class BudsService : Service() {
             putInt("last_auto_power_off", state.autoPowerOffMinutes)
             putBoolean("last_detail_enhancement", state.detailEnhancement)
             putInt("last_detail_enhancement_level", state.detailEnhancementLevel)
+            putBoolean("last_calibration", state.calibrationEnabled)
+            putString("last_my_eq", state.myEq?.joinToString(","))
+            putBoolean("last_my_eq_active", state.myEqActive)
             putInt("last_battery_left", state.battery.left)
             putInt("last_battery_right", state.battery.right)
             putInt("last_battery_case", state.battery.case)
@@ -1360,6 +1382,10 @@ class BudsService : Service() {
             autoPowerOffMinutes = prefs.getInt("last_auto_power_off", 0),
             detailEnhancement = prefs.getBoolean("last_detail_enhancement", false),
             detailEnhancementLevel = prefs.getInt("last_detail_enhancement_level", 1),
+            calibrationEnabled = prefs.getBoolean("last_calibration", false),
+            myEq = prefs.getString("last_my_eq", null)?.split(",")?.mapNotNull { it.toIntOrNull() }
+                ?.takeIf { it.size == 3 }?.toIntArray(),
+            myEqActive = prefs.getBoolean("last_my_eq_active", false),
             battery = ResponseParser.BatteryStatus(
                 left = prefs.getInt("last_battery_left", -1),
                 right = prefs.getInt("last_battery_right", -1),

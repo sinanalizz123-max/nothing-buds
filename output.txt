@@ -480,3 +480,41 @@ Verification:
 - Built APK copied to debug/app-debug.apk.
 
 Confidence: 100% (build-verified, tests green, diff is logging-only).
+
+Task 14 — Tile EQ selector, Personal Sound Calibration, notification hardening
+STATUS: DONE
+Changes:
+- EQScreen.kt: preset rows replaced by adaptive metric tiles (2-4 columns by
+  width; 3x2 for the six Dirac presets); Custom is a full-width tile (2/3 + My EQ
+  1/3 when a valid profile exists on Dirac models); Custom expands in place with
+  taller sliders (200dp), clear values, Reset. Protocol paths unchanged
+  (F01D rows, F041 3-band, F010 + 8-band preserved).
+- HomeScreen.kt: Equalizer row is tappable, shows the current preset (incl.
+  My EQ) as title-adjacent text; "Adjust" button removed. SettingRow gained an
+  optional onClick.
+- Calibration (new): calibration/CalibrationLogic.kt (threshold staircase,
+  My EQ generator, ANC save/restore controller, SystemEq.Unsupported report,
+  notification request matrix), TonePlayer.kt (conservative looping sine tones),
+  ui/screens/CalibrationScreen.kt (instructions -> 6-frequency threshold test
+  with I Hear It / I Don't Hear It / Stop Test -> My EQ preview + Buds EQ apply).
+  ANC saved, set HIGH only when supported, restored on finish/cancel/failure.
+- ExtrasScreen.kt: Experimental section with Personal Sound Calibration toggle
+  + Start calibration (only when enabled).
+- EarbudsState.kt + BudsService.kt: calibrationEnabled/myEq/myEqActive with
+  prefs persistence; setPersonalSoundCalibration/saveMyEq/applyMyEq (recall +
+  curve through existing Dirac Custom mechanism; manual preset edits clear it).
+- MainActivity.kt: "calibration" route; notification permission asked once
+  (persisted flag) and never gates the app.
+- SettingsScreen.kt: enabling the notification hub while permission is denied
+  shows the why-dialog (Allow Notifications / Not Now); denial keeps hub off.
+- Tests: CalibrationLogicTests (12), EQSelectorTests (7).
+
+Verification:
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug` -> BUILD SUCCESSFUL.
+- Unit test report: 50 tests, 0 failures, 0 errors.
+- Built APK copied to debug/app-debug.apk.
+- Known limits: My EQ tile/apply on Dirac-custom models only; System EQ
+  reported unsupported (no app-controllable path — never faked); tone levels
+  capped at 0.5; experimental disclaimers in UI, never medical claims.
+
+Confidence: 100% (build-verified, tests green).
