@@ -98,4 +98,7 @@ object NotificationPermission {
 
     fun shouldRequest(sdkInt: Int, granted: Boolean, askedBefore: Boolean): Boolean =
         sdkInt >= 33 && !granted && !askedBefore
+
+    fun resolveHubEnabled(granted: Boolean, userSet: Boolean, current: Boolean): Boolean =
+        if (userSet) current else granted
 }

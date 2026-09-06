@@ -29,10 +29,10 @@ class NotificationHelper(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    /** The hub can be switched off in settings; the tile keeps working either way. */
+    /** Off by default; auto-enabled when notification permission is granted (unless the user chose). */
     private val hubEnabled: Boolean
         get() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(PREF_SHOW_HUB, true)
+            .getBoolean(PREF_SHOW_HUB, false)
 
     /** Short-lived placeholder shown while the SPP link is being established. */
     fun createConnectingNotification(): Notification =

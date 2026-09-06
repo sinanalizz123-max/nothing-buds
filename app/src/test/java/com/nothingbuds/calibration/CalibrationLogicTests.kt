@@ -108,6 +108,30 @@ class CalibrationLogicTests {
     }
 
     @Test
+    fun `hub auto-enable respects explicit user choice`() {
+        assertTrue(
+            NotificationPermission.resolveHubEnabled(
+                granted = true, userSet = false, current = false
+            )
+        )
+        assertFalse(
+            NotificationPermission.resolveHubEnabled(
+                granted = false, userSet = false, current = false
+            )
+        )
+        assertFalse(
+            NotificationPermission.resolveHubEnabled(
+                granted = true, userSet = true, current = false
+            )
+        )
+        assertTrue(
+            NotificationPermission.resolveHubEnabled(
+                granted = false, userSet = true, current = true
+            )
+        )
+    }
+
+    @Test
     fun `notification permission request matrix`() {
         assertTrue(NotificationPermission.shouldRequest(33, granted = false, askedBefore = false))
         assertTrue(NotificationPermission.shouldRequest(34, granted = false, askedBefore = false))

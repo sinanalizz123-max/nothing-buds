@@ -53,7 +53,7 @@ fun SettingsScreen(
     val prefs = remember { context.getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE) }
 
     var autoConnect by remember { mutableStateOf(prefs.getBoolean("auto_connect", true)) }
-    var showNotification by remember { mutableStateOf(prefs.getBoolean("show_notification", true)) }
+    var showNotification by remember { mutableStateOf(prefs.getBoolean("show_notification", false)) }
     var isAssociated by remember { mutableStateOf(CompanionPairing.isAssociated(context)) }
     var showNotifRationale by remember { mutableStateOf(false) }
 
@@ -65,7 +65,8 @@ fun SettingsScreen(
 
     fun applyHub(enabled: Boolean) {
         showNotification = enabled
-        prefs.edit().putBoolean("show_notification", enabled).apply()
+        prefs.edit().putBoolean("show_notification", enabled)
+            .putBoolean("hub_user_set", true).apply()
         // Repost immediately instead of waiting for the next state change.
         runCatching {
             context.startService(

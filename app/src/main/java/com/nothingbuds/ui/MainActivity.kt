@@ -81,6 +81,31 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
         getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
             .edit().putBoolean(NotificationPermission.PREF_ASKED, true).apply()
+        syncHubToNotificationPermission(granted)
+    }
+
+    private fun isNotifGranted(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun syncHubToNotificationPermission(granted: Boolean) {
+        val prefs = getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+        val enabled = NotificationPermission.resolveHubEnabled(
+            granted,
+            prefs.getBoolean("hub_user_set", false),
+            prefs.getBoolean("show_notification", false)
+        )
+        prefs.edit().putBoolean("show_notification", enabled).apply()
+        if (enabled) {
+            runCatching {
+                startService(
+                    Intent(this, BudsService::class.java)
+                        .setAction(BudsService.ACTION_REFRESH_NOTIFICATION)
+                )
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -258,10 +283,8 @@ class MainActivity : ComponentActivity() {
 
         // Notification permission is independent: it only affects whether the foreground-service
         // notification is visible and must not gate Bluetooth functionality. Asked once;
-        // a denial never blocks the app.
-        val notifGranted = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.POST_NOTIFICATIONS
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        // a denial never blocks the app. A grant auto-enables the hub unless chosen otherwise.
+        val notifGranted = isNotifGranted()
         val prefs = getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
         if (NotificationPermission.shouldRequest(
                 Build.VERSION.SDK_INT, notifGranted,
@@ -269,6 +292,8 @@ class MainActivity : ComponentActivity() {
             )
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            syncHubToNotificationPermission(notifGranted)
         }
     }
 
