@@ -30,6 +30,8 @@ data class EarbudsState(
     val dualDevices: List<ResponseParser.DualDevice> = emptyList(),
     /** Dirac Opteo EQ preset id (0..5 named, 6 custom); only meaningful on Dirac models. */
     val diracEq: Int = 0,
+    /** Dirac Custom curve gains in dB (-6..+6): Bass, Mid, Treble. Dirac models only. */
+    val diracCustomEq: IntArray = IntArray(3) { 0 },
     val lhdc: Boolean = false,
     /** 0 means the earbuds never power themselves off. */
     val autoPowerOffMinutes: Int = 0,
@@ -65,6 +67,7 @@ data class EarbudsState(
                 dualDevice == other.dualDevice &&
                 dualDevices == other.dualDevices &&
                 diracEq == other.diracEq &&
+                diracCustomEq.contentEquals(other.diracCustomEq) &&
                 lhdc == other.lhdc &&
                 autoPowerOffMinutes == other.autoPowerOffMinutes &&
                 caseLedColor == other.caseLedColor &&
@@ -94,6 +97,7 @@ data class EarbudsState(
         result = 31 * result + dualDevice.hashCode()
         result = 31 * result + dualDevices.hashCode()
         result = 31 * result + diracEq
+        result = 31 * result + diracCustomEq.contentHashCode()
         result = 31 * result + lhdc.hashCode()
         result = 31 * result + autoPowerOffMinutes
         result = 31 * result + caseLedColor

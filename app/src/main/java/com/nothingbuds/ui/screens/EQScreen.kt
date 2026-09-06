@@ -24,9 +24,11 @@ fun EQScreen(
     onSetPreset: (EqPreset) -> Unit,
     onSetDiracEq: (Int) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
+    onSetDiracCustomEq: (Int, Int, Int) -> Unit,
     onBack: () -> Unit
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
+    var diracBands by remember { mutableStateOf(state.diracCustomEq.copyOf()) }
     val isDirac = state.deviceModel?.hasDiracEq == true
     var showDiracUnavailable by remember { mutableStateOf(false) }
 
@@ -58,60 +60,51 @@ fun EQScreen(
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                if (isDirac) {
-                    "Dirac Opteo is one equalizer mode. The presets below use the standard equalizer; Dirac Opteo is the mode that shares the wire with the LDAC codec."
-                } else {
-                    "Pick a preset; the earbuds apply the curve instantly."
-                },
+                "Pick a preset; the earbuds apply the curve instantly.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            // Standard EQ presets (SET_EQ, 0xF010). On Dirac-capable models (B172/B168) these
-            // still go through the normal equalizer; only the Dirac Opteo row below talks to the
-            // Dirac EQ command (0xF01D).
-            EqPreset.entries.forEach { preset ->
-                EqPresetRow(
-                    name = getPresetDisplayName(preset),
-                    description = getPresetDescription(preset),
-                    isSelected = state.eqPreset == preset &&
-                        !(preset == EqPreset.BALANCED && diracModeActive(state.diracEq, state.eqPreset)),
-                    enabled = true,
-                    onClick = { onSetPreset(preset) }
-                )
-            }
-
             if (isDirac) {
-                val target = eqRowTarget(isOpteoRow = true, lhdcActive = state.lhdc)
-                EqPresetRow(
-                    name = DiracEqPreset.OPTEO.displayName,
-                    description = getDiracPresetDescription(DiracEqPreset.OPTEO),
-                    isSelected = diracModeActive(state.diracEq, state.eqPreset),
-                    enabled = true,
-                    onClick = {
-                        when (target) {
-                            EqRowTarget.SET_DIRAC_EQ -> {
-                                // Only the Dirac Opteo row writes through the Dirac EQ command
-                                // (0xF01D, level 0); the standard presets above never do.
-                                onSetDiracEq(DiracEqPreset.OPTEO.type)
-                            }
-                            EqRowTarget.DIRAC_UNAVAILABLE -> {
-                                // Matches the official app: tapping Dirac Opteo while LDAC is on
+                // One EQ list on Dirac-capable models (B172/B168): Dirac is simply the
+                // first preset. Every row writes through SET_DIRAC_EQ (0xF01D).
+                diracRowOrder.forEach { preset ->
+                    EqPresetRow(
+                        name = if (preset == DiracEqPreset.OPTEO) "Dirac" else preset.displayName,
+                        description = getDiracPresetDescription(preset),
+                        isSelected = DiracEqPreset.fromLevel(state.diracEq) == preset,
+                        enabled = true,
+                        onClick = {
+                            if (preset == DiracEqPreset.OPTEO && state.lhdc) {
+                                // Matches the official app: tapping Dirac while LDAC is on
                                 // shows the "…is unavailable while LDAC is on" dialog and does not
                                 // send anything to the earbuds.
                                 showDiracUnavailable = true
+                            } else {
+                                onSetDiracEq(preset.type)
                             }
-                            else -> Unit
                         }
-                    }
-                )
+                    )
+                }
+            } else {
+                EqPreset.entries.forEach { preset ->
+                    EqPresetRow(
+                        name = getPresetDisplayName(preset),
+                        description = getPresetDescription(preset),
+                        isSelected = state.eqPreset == preset,
+                        enabled = true,
+                        onClick = { onSetPreset(preset) }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Custom EQ
-            if (state.deviceModel?.hasCustomEq == true) {
+            if (state.deviceModel?.hasCustomEq == true &&
+                (!isDirac || DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM)
+            ) {
                 Text(
                     "Custom EQ",
                     style = MaterialTheme.typography.titleMedium,
@@ -129,6 +122,56 @@ fun EQScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
+                        if (isDirac) {
+                            // Dirac Custom is exactly 3 bands (Bass/Mid/Treble, -6..+6),
+                            // written through SET_CUSTOM_EQ (0xF041).
+                            val diracLabels = listOf("Bass", "Mid", "Treble")
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                diracLabels.forEachIndexed { index, label ->
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        EqBandSlider(
+                                            value = diracBands[index],
+                                            onValueChange = { newValue ->
+                                                diracBands = diracBands.copyOf().also {
+                                                    it[index] = newValue
+                                                }
+                                            },
+                                            onValueChangeFinished = {
+                                                onSetDiracCustomEq(diracBands[0], diracBands[1], diracBands[2])
+                                            }
+                                        )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        Text(
+                                            label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            OutlinedButton(
+                                onClick = {
+                                    diracBands = IntArray(3) { 0 }
+                                    onSetDiracCustomEq(0, 0, 0)
+                                },
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) {
+                                Text("Reset")
+                            }
+                        } else {
                         // Frequency labels
                         val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
 
@@ -174,8 +217,9 @@ fun EQScreen(
                                 onSetCustomEq(customBands)
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
-                        ) {
-                            Text("Reset")
+                            ) {
+                                Text("Reset")
+                            }
                         }
                     }
                 }
@@ -189,8 +233,8 @@ fun EQScreen(
             confirmButton = {
                 TextButton(onClick = { showDiracUnavailable = false }) { Text("OK") }
             },
-            title = { Text("Dirac Opteo unavailable") },
-            text = { Text("Dirac Opteo is unavailable while the LDAC/LHDC codec is on. Turn the codec off to use Dirac Opteo; the other presets are unaffected.") }
+            title = { Text("Dirac unavailable") },
+            text = { Text("Dirac is unavailable while the LDAC/LHDC codec is on. Turn the codec off to use Dirac; the other presets are unaffected.") }
         )
     }
 }
@@ -341,24 +385,13 @@ private fun getDiracPresetDescription(preset: DiracEqPreset): String {
     }
 }
 
-internal enum class EqRowTarget {
-    SET_DIRAC_EQ,
-    DIRAC_UNAVAILABLE,
-    DO_NOTHING
-}
-
-internal fun eqRowTarget(isOpteoRow: Boolean, lhdcActive: Boolean): EqRowTarget {
-    return if (isOpteoRow) {
-        if (lhdcActive) {
-            EqRowTarget.DIRAC_UNAVAILABLE
-        } else {
-            EqRowTarget.SET_DIRAC_EQ
-        }
-    } else {
-        EqRowTarget.DO_NOTHING
-    }
-}
-
-internal fun diracModeActive(diracEq: Int, eqPreset: EqPreset): Boolean {
-    return diracEq == DiracEqPreset.OPTEO.type && eqPreset == EqPreset.BALANCED
-}
+/** One EQ list on Dirac-capable models: Dirac first, then the genre presets. */
+internal val diracRowOrder = listOf(
+    DiracEqPreset.OPTEO,
+    DiracEqPreset.POP,
+    DiracEqPreset.ROCK,
+    DiracEqPreset.CLASSICAL,
+    DiracEqPreset.ELECTRONIC,
+    DiracEqPreset.ENHANCE_VOCALS,
+    DiracEqPreset.CUSTOM
+)

@@ -153,6 +153,7 @@ class MainActivity : ComponentActivity() {
                                 state = state,
                                 onSetPreset = { preset -> budsService?.setEqPreset(preset) },
                                 onSetDiracEq = { level -> budsService?.setDiracEq(level) },
+                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
                                 onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
                                 onBack = { navController.popBackStack() }
                             )

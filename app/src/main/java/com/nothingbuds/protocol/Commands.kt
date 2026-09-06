@@ -66,6 +66,8 @@ object Commands {
     const val SET_LHDC: Int = 0xF01C
     const val SET_DIRAC_EQ: Int = 0xF01D             // Dirac Opteo preset/custom
     const val SET_LOW_LATENCY: Int = 0xF040
+    /** 3-band product custom EQ curve (CustomEQ float struct); see re/CUSTOM_EQ/F041_C044.md. */
+    const val SET_CUSTOM_EQ: Int = 0xF041
     const val SET_BASS_BOOST: Int = 0xF051
     const val SET_BASS_ENHANCER: Int = 0xF057
     const val SET_SPATIAL_AUDIO: Int = 0xF052
@@ -205,7 +207,7 @@ enum class DiracEqPreset(val type: Int) {
 
     val displayName: String
         get() = when (this) {
-            OPTEO -> "Dirac Opteo"
+            OPTEO -> "Dirac"
             POP -> "Pop"
             ROCK -> "Rock"
             CLASSICAL -> "Classical"

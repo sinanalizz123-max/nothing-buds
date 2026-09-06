@@ -284,6 +284,36 @@ object PacketBuilder {
         return build(Commands.SET_ADVANCED_EQ_VALUES, payload)
     }
 
+    /**
+     * Dirac 3-band custom curve (Bass/Mid/Treble) through SET_CUSTOM_EQ (0xF041).
+     * Layout per re/CUSTOM_EQ/F041_C044.md: `[count=3][totalGain f32 LE]` then
+     * bands in radar order Mid, Treble, Bass as `[filterType(1), gain f32 LE,
+     * freq f32 LE, Q f32 LE]`, padded with trailing zeros to 5+16*3 bytes.
+     * Frequencies/Q match the official Dirac models (B172/B168):
+     * Bass 140 Hz/0.8 (low shelf), Mid 980 Hz/0.66 (peak), Treble 3500 Hz/1.0
+     * (high shelf). totalGain is always -(max band gain).
+     * @param bass/mid/treble gain per band in dB, clamped to -6..+6
+     */
+    fun setDiracCustomEq(bass: Int, mid: Int, treble: Int): ByteArray {
+        val gains = mapOf(
+            0 to bass.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN),
+            1 to mid.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN),
+            2 to treble.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN)
+        )
+        val totalGain = -((gains.values.maxOrNull() ?: 0).toFloat())
+        val bandBytes = DIRAC_BANDS.flatMap { (filterType, freq, q) ->
+            val gain = gains.getValue(filterType).toFloat()
+            listOf(filterType.toByte()) + floatLe(gain) + floatLe(freq) + floatLe(q)
+        }.toByteArray()
+        val payload = byteArrayOf(3, *floatLe(totalGain).toByteArray()) + bandBytes +
+            ByteArray(DIRAC_CUSTOM_PACKET_SIZE - 5 - bandBytes.size)
+        return build(Commands.SET_CUSTOM_EQ, payload)
+    }
+
+    private fun floatLe(value: Float): List<Byte> =
+        java.nio.ByteBuffer.allocate(4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .putFloat(value).array().toList()
+
     const val SIDE_LEFT = 0x02
     const val SIDE_RIGHT = 0x03
     const val SIDE_BOTH = 0x06
@@ -306,5 +336,15 @@ object PacketBuilder {
     const val DETAIL_LEVEL_MAX = 3
     /** Dirac Opteo preset ids run 0..5 (named) with 6 reserved for custom. */
     const val DIRAC_LEVEL_MAX = 6
+    /** Dirac Custom sliders run -6..+6 dB, exactly 3 bands: Bass, Mid, Treble. */
+    const val DIRAC_BAND_GAIN = 6
+    /** CustomEQ on-wire size for 3 bands (5+16*3, incl. trailing-zero padding). */
+    const val DIRAC_CUSTOM_PACKET_SIZE = 53
+    /** Radar-ordered bands: (filterType, frequency Hz, Q). */
+    private val DIRAC_BANDS = listOf(
+        Triple(1, 980f, 0.66f),
+        Triple(2, 3500f, 1.0f),
+        Triple(0, 140f, 0.8f)
+    )
     private const val EQ_GAIN_OFFSET = 6
 }

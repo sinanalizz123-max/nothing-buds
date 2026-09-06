@@ -424,12 +424,9 @@ private fun SoundCard(
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
-            subtitle = if (state.deviceModel?.hasDiracEq == true &&
-                diracModeActive(state.diracEq, state.eqPreset)
-            ) {
-                // Dirac Opteo is the active EQ mode (0xF01D level 0). Otherwise one of the
-                // standard presets (or Custom) is active instead — the two are mutually exclusive.
-                DiracEqPreset.OPTEO.displayName
+            subtitle = if (state.deviceModel?.hasDiracEq == true) {
+                // One EQ list on Dirac models: the C050 level selects the row.
+                DiracEqPreset.fromLevel(state.diracEq).displayName
             } else {
                 state.eqPreset.name.lowercase().replaceFirstChar { it.uppercase() }
             },

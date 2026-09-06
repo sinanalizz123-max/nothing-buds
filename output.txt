@@ -426,3 +426,33 @@ Verification:
   nothing-buds-build) because /storage/emulated/0 is mounted noexec; results synced back.
 
 Confidence: 100% (build-verified, 23 tests green, regression guard on the routing contract).
+
+Task 12 — Dirac as first EQ preset (single 7-row list, F01D/C050 + F041 custom)
+STATUS: DONE
+Changes:
+- EQScreen.kt: on Dirac-capable models (B172/B168) the EQ screen is now ONE preset
+  list — Dirac, Pop, Rock, Classical, Electronic, Enhance Vocals, Custom — every
+  row writes SET_DIRAC_EQ (0xF01D [type, 0x00]); selection reflects the C050 level
+  via DiracEqPreset.fromLevel(). Dirac row keeps the LDAC-unavailable dialog
+  (official behavior). Non-Dirac screen (F010 presets + 8-band custom) untouched.
+- Dirac Custom row opens exactly 3 bands (Bass/Mid/Treble, -6..+6) writing
+  SET_CUSTOM_EQ (0xF041) with the CustomEQ float struct from re/CUSTOM_EQ
+  (count, totalGain=-max, radar-order bands Mid/Treble/Bass, zero padding).
+  Removed the Task-11 split-mode helpers (EqRowTarget/eqRowTarget/diracModeActive).
+- Commands.kt: added SET_CUSTOM_EQ = 0xF041; DiracEqPreset OPTEO display "Dirac".
+- PacketBuilder.kt: added setDiracCustomEq(bass, mid, treble) + float LE helper.
+- EarbudsState.kt: added diracCustomEq IntArray(3) (+ equals/hashCode).
+- BudsService.kt: setDiracEq() writes state.diracEq only; added setDiracCustomEq().
+- MainActivity.kt: wired onSetDiracCustomEq. HomeScreen.kt: Dirac subtitle shows
+  the selected Dirac preset name.
+- EQRoutingTests.kt rewritten (7 tests): row order + types, all rows F01D,
+  level mapping, F010/F06D paths intact, F041 struct layout + clamping.
+
+Verification:
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest` -> BUILD SUCCESSFUL.
+- Unit test report: 24 tests, 0 failures, 0 errors (17 protocol + 7 routing).
+- Built APK copied to debug/app-debug.apk.
+- Build ran from ext4 copy (/data/data/com.termux/files/home/nothing-buds-build);
+  sources synced back verbatim.
+
+Confidence: 100% (build-verified, tests green, protocol per re/ research).
