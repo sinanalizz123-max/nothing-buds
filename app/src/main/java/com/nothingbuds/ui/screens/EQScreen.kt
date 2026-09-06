@@ -59,7 +59,7 @@ fun EQScreen(
             )
             Text(
                 if (isDirac) {
-                    "Dirac Opteo is just one of the presets below. Only it shares the wire with the LDAC codec — the others keep working while LDAC is on."
+                    "Dirac Opteo is one equalizer mode. The presets below use the standard equalizer; Dirac Opteo is the mode that shares the wire with the LDAC codec."
                 } else {
                     "Pick a preset; the earbuds apply the curve instantly."
                 },
@@ -68,38 +68,44 @@ fun EQScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
+            // Standard EQ presets (SET_EQ, 0xF010). On Dirac-capable models (B172/B168) these
+            // still go through the normal equalizer; only the Dirac Opteo row below talks to the
+            // Dirac EQ command (0xF01D).
+            EqPreset.entries.forEach { preset ->
+                EqPresetRow(
+                    name = getPresetDisplayName(preset),
+                    description = getPresetDescription(preset),
+                    isSelected = state.eqPreset == preset &&
+                        !(preset == EqPreset.BALANCED && diracModeActive(state.diracEq, state.eqPreset)),
+                    enabled = true,
+                    onClick = { onSetPreset(preset) }
+                )
+            }
+
             if (isDirac) {
-                // Official 7-row list (Nothing X EqualizerViewModel.initSoundTypes): Dirac Opteo
-                // first, then the genre presets and Custom. Only the Dirac Opteo row checks the
-                // LDAC codec (0xF1C read at tap time); the theme presets write regardless.
-                DiracEqPreset.entries.forEach { preset ->
-                    EqPresetRow(
-                        name = preset.displayName,
-                        description = getDiracPresetDescription(preset),
-                        isSelected = DiracEqPreset.fromLevel(state.diracEq) == preset,
-                        enabled = true,
-                        onClick = {
-                            if (preset == DiracEqPreset.OPTEO && state.lhdc) {
+                val target = eqRowTarget(isOpteoRow = true, lhdcActive = state.lhdc)
+                EqPresetRow(
+                    name = DiracEqPreset.OPTEO.displayName,
+                    description = getDiracPresetDescription(DiracEqPreset.OPTEO),
+                    isSelected = diracModeActive(state.diracEq, state.eqPreset),
+                    enabled = true,
+                    onClick = {
+                        when (target) {
+                            EqRowTarget.SET_DIRAC_EQ -> {
+                                // Only the Dirac Opteo row writes through the Dirac EQ command
+                                // (0xF01D, level 0); the standard presets above never do.
+                                onSetDiracEq(DiracEqPreset.OPTEO.type)
+                            }
+                            EqRowTarget.DIRAC_UNAVAILABLE -> {
                                 // Matches the official app: tapping Dirac Opteo while LDAC is on
                                 // shows the "…is unavailable while LDAC is on" dialog and does not
                                 // send anything to the earbuds.
                                 showDiracUnavailable = true
-                            } else {
-                                onSetDiracEq(preset.type)
                             }
+                            else -> Unit
                         }
-                    )
-                }
-            } else {
-                EqPreset.entries.forEach { preset ->
-                    EqPresetRow(
-                        name = getPresetDisplayName(preset),
-                        description = getPresetDescription(preset),
-                        isSelected = state.eqPreset == preset,
-                        enabled = true,
-                        onClick = { onSetPreset(preset) }
-                    )
-                }
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -123,68 +129,53 @@ fun EQScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
-                        if (isDirac) {
-                            Text(
-                                "Picking Custom (level 6) recalls the curve stored on the earbuds. The official builder is a 3-band Dirac curve that this build does not write yet.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            OutlinedButton(
-                                onClick = { onSetDiracEq(DiracEqPreset.CUSTOM.type) },
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            ) {
-                                Text("Recall custom curve")
-                            }
-                        } else {
-                            // Frequency labels
-                            val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
+                        // Frequency labels
+                        val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                frequencies.forEachIndexed { index, freq ->
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        EqBandSlider(
-                                            value = customBands[index],
-                                            onValueChange = { newValue ->
-                                                customBands = customBands.copyOf().also {
-                                                    it[index] = newValue
-                                                }
-                                            },
-                                            onValueChangeFinished = {
-                                                onSetCustomEq(customBands)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            frequencies.forEachIndexed { index, freq ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    EqBandSlider(
+                                        value = customBands[index],
+                                        onValueChange = { newValue ->
+                                            customBands = customBands.copyOf().also {
+                                                it[index] = newValue
                                             }
-                                        )
+                                        },
+                                        onValueChangeFinished = {
+                                            onSetCustomEq(customBands)
+                                        }
+                                    )
 
-                                        Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                        Text(
-                                            freq,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
+                                    Text(
+                                        freq,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                            // Reset button
-                            OutlinedButton(
-                                onClick = {
-                                    customBands = IntArray(8) { 0 }
-                                    onSetCustomEq(customBands)
-                                },
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            ) {
-                                Text("Reset")
-                            }
+                        // Reset button
+                        OutlinedButton(
+                            onClick = {
+                                customBands = IntArray(8) { 0 }
+                                onSetCustomEq(customBands)
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        ) {
+                            Text("Reset")
                         }
                     }
                 }
@@ -348,4 +339,26 @@ private fun getDiracPresetDescription(preset: DiracEqPreset): String {
         DiracEqPreset.ENHANCE_VOCALS -> "Voice-focused curve"
         DiracEqPreset.CUSTOM -> "Your custom curve stored on the earbuds"
     }
+}
+
+internal enum class EqRowTarget {
+    SET_DIRAC_EQ,
+    DIRAC_UNAVAILABLE,
+    DO_NOTHING
+}
+
+internal fun eqRowTarget(isOpteoRow: Boolean, lhdcActive: Boolean): EqRowTarget {
+    return if (isOpteoRow) {
+        if (lhdcActive) {
+            EqRowTarget.DIRAC_UNAVAILABLE
+        } else {
+            EqRowTarget.SET_DIRAC_EQ
+        }
+    } else {
+        EqRowTarget.DO_NOTHING
+    }
+}
+
+internal fun diracModeActive(diracEq: Int, eqPreset: EqPreset): Boolean {
+    return diracEq == DiracEqPreset.OPTEO.type && eqPreset == EqPreset.BALANCED
 }

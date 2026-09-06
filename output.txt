@@ -394,3 +394,35 @@ Remaining uncertainties:
 4. B164's hasGestureControl flag is incorrectly false. Pre-existing.
 5. The 16-bit packet length field in build() is a latent bug for large payloads. Not
    triggered by gesture writes; out of scope for this branch.
+
+Task 11 — Fix Dirac EQ preset routing (regression from eed4bb3)
+STATUS: DONE
+Changes:
+- EQScreen.kt: the top-level status read said "all rows use the standard equalizer"; the
+  Corrected screen splits the equalizer into (a) the standard EqPreset rows (SET_EQ, 0xF010),
+  (b) a single Dirac Opteo row on Dirac-capable models (SET_DIRAC_EQ, 0xF01D, level 0),
+  (c) the Custom EQ sliders (SET_ADVANCED_EQ_VALUES, 0xF06D).
+- Added internal eqRowTarget(isOpteoRow, lhdcActive) and diracModeActive(diracEq, eqPreset)
+  pure helpers so the radio selection is a single mutually exclusive choice: either Dirac Opteo
+  or one standard preset. Only the Opteo row routes to 0xF01D; it is blocked (dialog) while
+  the LDAC/LHDC codec is on, matching the official app.
+- EQScreen Custom EQ section: removed the Dirac-only "Recall custom curve" path (F01D level 6);
+  Dirac-capable models now show the same 8-band sliders writing through the advanced-EQ
+  command (existing correct custom path).
+- BudsService.setDiracEq(): selecting Dirac Opteo also resets eqPreset to BALANCED so the
+  mutual-exclusion state (diracEq=0 + eqPreset=BALANCED) is consistent.
+- HomeScreen subtitle: "Dirac Opteo" only when diracModeActive, otherwise the standard preset
+  name (previously the subtitle always echoed the Dirac row name on B172/B168).
+- Added app/src/test/java/com/nothingbuds/ui/screens/EQRoutingTests.kt (6 tests): Opteo row
+  targets 0xF01D only when LDAC off; blocked while LDAC on; non-Opteo rows never touch the
+  Dirac command; standard presets still write through 0xF010 with payload [value, 0x00];
+  custom writes through 0xF06D; diracModeActive is a single-choice predicate.
+
+Verification:
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest` -> BUILD SUCCESSFUL.
+- Unit test report: 23 tests, 0 failures, 0 errors (17 Task 10 + 6 new).
+- Built APK copied to debug/app-debug.apk.
+- Build environment note: gradle run from the ext4 copy (/data/data/com.termux/files/home/
+  nothing-buds-build) because /storage/emulated/0 is mounted noexec; results synced back.
+
+Confidence: 100% (build-verified, 23 tests green, regression guard on the routing contract).

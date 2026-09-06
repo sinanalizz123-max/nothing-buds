@@ -1070,8 +1070,9 @@ class BudsService : Service() {
 
     fun setEqPreset(preset: EqPreset) {
         Log.d(TAG, "Setting EQ preset: $preset")
-        // Simple-equalizer models only. Dirac-Opteo models (B172/B168) run the whole equalizer
-        // through 0xF01D instead and write via setDiracEq() with a DiracEqPreset level.
+        // Standard EQ presets always write through 0xF010 — on Dirac-Opteo models (B172/B168)
+        // too. The Dirac Opteo mode is a separate, mutually exclusive choice handled by
+        // setDiracEq() (0xF01D); it is not the whole equalizer.
         sendCommand(PacketBuilder.setEq(preset))
         updateState { it.copy(eqPreset = preset) }
     }
@@ -1138,7 +1139,7 @@ class BudsService : Service() {
     fun setDiracEq(level: Int) {
         Log.d(TAG, "Setting Dirac EQ: $level")
         sendCommand(PacketBuilder.setDiracEq(level))
-        updateState { it.copy(diracEq = level) }
+        updateState { it.copy(diracEq = level, eqPreset = EqPreset.BALANCED) }
     }
 
     fun setLhdc(enabled: Boolean) {
