@@ -25,6 +25,7 @@ import com.nothingbuds.data.DeviceModels
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.AncMode
 import com.nothingbuds.protocol.Commands
+import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import com.nothingbuds.protocol.ResponseParser
@@ -907,6 +908,9 @@ class BudsService : Service() {
             Commands.RESPONSE_DIRAC_EQ -> {
                 val dirac = ResponseParser.parseDiracEq(response.payload)
                 Log.d(TAG, "Dirac EQ: preset=$dirac")
+                Log.d(TAG, "Dirac RX cmd=0x${response.command.toString(16)} " +
+                    "payload=${response.payload.toHexString()} " +
+                    "parsed={level=$dirac, preset=${DiracEqPreset.fromLevel(dirac).displayName}}")
                 // The 0xC050 reading is an active Dirac-Opteo level (0 Dirac Opteo, 1 Rock,
                 // 2 Electronic, 3 Pop, 4 Enhance Vocals, 5 Classical, 6 Custom); the EQ screen
                 // maps it back to a row via DiracEqPreset.fromLevel().
@@ -1137,15 +1141,25 @@ class BudsService : Service() {
 
     fun setDiracEq(level: Int) {
         Log.d(TAG, "Setting Dirac EQ: $level")
-        sendCommand(PacketBuilder.setDiracEq(level))
+        val frame = PacketBuilder.setDiracEq(level)
+        Log.d(TAG, "Dirac TX cmd=0xF01D payload=${frame.diracPayloadHex()} " +
+            "parsed={level=$level, preset=${DiracEqPreset.fromLevel(level).displayName}}")
+        sendCommand(frame)
         updateState { it.copy(diracEq = level) }
     }
 
     fun setDiracCustomEq(bass: Int, mid: Int, treble: Int) {
         Log.d(TAG, "Setting Dirac custom EQ: bass=$bass mid=$mid treble=$treble")
-        sendCommand(PacketBuilder.setDiracCustomEq(bass, mid, treble))
+        val frame = PacketBuilder.setDiracCustomEq(bass, mid, treble)
+        Log.d(TAG, "Dirac TX cmd=0xF041 payload=${frame.diracPayloadHex()} " +
+            "parsed={bass=$bass, mid=$mid, treble=$treble}")
+        sendCommand(frame)
         updateState { it.copy(diracCustomEq = intArrayOf(bass, mid, treble)) }
     }
+
+    /** Payload bytes (frame minus 8-byte header and 2-byte CRC) as hex, for Dirac diagnostics. */
+    private fun ByteArray.diracPayloadHex(): String =
+        copyOfRange(8, size - 2).toHexString()
 
     fun setLhdc(enabled: Boolean) {
         Log.d(TAG, "Setting LHDC: $enabled")
