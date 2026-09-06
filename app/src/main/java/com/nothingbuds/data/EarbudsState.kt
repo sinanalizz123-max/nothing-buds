@@ -380,13 +380,25 @@ object DeviceModels {
 
     /**
      * Find device model by Bluetooth device name. Exact matches are a map hit; a substring pass
-     * is kept as a fallback for names that include extra words (e.g. "CMF Buds 2 Plus (LE)").
+     * is kept as a fallback for names that include extra words (e.g. "CMF Buds 2 Plus (LE)") and
+     * picks the LONGEST matching model name so "CMF Buds 2a ..." cannot match plain "CMF Buds 2".
      */
     fun findByName(name: String): DeviceModel? {
         val lowerName = name.lowercase()
-        return byName[lowerName] ?: ALL_MODELS.find {
-            lowerName.contains(it.name.lowercase()) || lowerName.contains(it.id.lowercase())
+        byName[lowerName]?.let { return it }
+
+        var best: DeviceModel? = null
+        var bestLen = 0
+        for (model in ALL_MODELS) {
+            val modelName = model.name.lowercase()
+            if (lowerName.contains(modelName)) {
+                if (modelName.length > bestLen) {
+                    best = model
+                    bestLen = modelName.length
+                }
+            }
         }
+        return best
     }
 
     /**

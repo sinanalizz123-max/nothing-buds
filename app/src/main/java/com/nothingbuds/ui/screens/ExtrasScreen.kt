@@ -189,7 +189,11 @@ fun ExtrasScreen(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Text(
-                                        if (device.isConnected) "Active / connected" else "Tap to make active",
+                                        if (device.flags != 0) {
+                                            "Firmware status: ${device.flags}"
+                                        } else {
+                                            "Tap to make active"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

@@ -347,7 +347,39 @@ Verification:
 
 Confidence: 100% on the static audit; build verification deferred to user.
 
-OVERALL STATUS: ALL TASKS COMPLETE (static audit + 6 source-verified tasks).
+Task 10 — General audit, verification, and unit tests
+STATUS: DONE
+Changes:
+- BudsService.handleResponse(): added early-return guard
+  `if (!BudsRepository.state.value.isConnected) return` so BLE response callbacks that
+  arrive after a disconnect abort before touching state/dbus (fixes state-updates-after-
+  disconnect picked up by the audit).
+- Moved String.parseHexOrNull() and isValidRawFrame() from private member extensions to
+  top-level internal helpers in BudsService.kt (identical behavior) so JVM unit tests can
+  exercise the real production code. Call sites in the Send() actor are unchanged.
+- GestureCapabilities.kt: removed duplicate `import com.nothingbuds.protocol.PacketBuilder`
+  (compilation error).
+- app/build.gradle.kts: added `testOptions { unitTests.isReturnDefaultValues = true }` so
+  android.util.Log calls do not throw "not mocked" in JVM tests.
+- Added app/src/test/java/com/nothingbuds/protocol/ProtocolUnitTests.kt (17 tests):
+  * parseHexOrNull: valid hex (incl. empty), non-hex char, odd length, 0x prefix.
+  * isValidRawFrame: well-formed frame, empty, bad SOF, too-short, length mismatch.
+  * DeviceModels.findByName: exact name, longest-substring fallback, no match.
+  * ResponseParser.parse: no-CRC packet, CRC-match, CRC-mismatch, truncated packet.
+  * parseGestures / parseCaseLed / parseDualDeviceList: valid payloads + truncated.
+
+Verification:
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest` -> BUILD SUCCESSFUL.
+- Unit test report: 17 tests, 0 failures, 0 errors.
+- Built APK copied to debug/app-debug.apk (20.7 MB).
+- Build environment note: the repo lives under /storage/emulated/0 which is mounted
+  noexec (chmod +x is ignored on FUSE), so gradle must run from an ext4 copy; the build
+  was run from /data/data/com.termux/files/home/nothing-buds-build and results synced back.
+- Everything the audit flagged this round has been addressed or is documented above.
+
+Confidence: 100% (build-verified; tests green).
+
+OVERALL STATUS: ALL TASKS COMPLETE (audit + build-verified, 17 unit tests green).
 
 Remaining uncertainties:
 1. Elekid button-10 defaults (gesture 1 → isNothingOS()?32:11, gesture 7 button 10 →

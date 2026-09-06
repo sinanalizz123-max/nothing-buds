@@ -63,11 +63,20 @@ class MainActivity : ComponentActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        Log.d(TAG, "Permissions result: allGranted=$allGranted")
-        if (allGranted) {
+        // Bluetooth is independent of notifications: only BLUETOOTH_CONNECT decides whether the
+        // service can run. A denied POST_NOTIFICATIONS must not block earbud functionality.
+        val btGranted = permissions[Manifest.permission.BLUETOOTH_CONNECT]
+            ?: hasBluetoothConnectPermission()
+        Log.d(TAG, "Bluetooth CONNECT granted=$btGranted")
+        if (btGranted) {
             startAndBindService()
         }
+    }
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -191,7 +200,9 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         Log.d(TAG, "onStart")
-        startAndBindService()
+        if (hasBluetoothConnectPermission()) {
+            startAndBindService()
+        }
     }
 
     override fun onStop() {
@@ -204,22 +215,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun hasBluetoothConnectPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
     private fun requestPermissions() {
         val permissions = mutableListOf<String>()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Connected devices / pairing only need CONNECT; SCAN is not used anywhere in the app.
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         if (permissions.isNotEmpty()) {
             permissionLauncher.launch(permissions.toTypedArray())
         } else {
             startAndBindService()
+        }
+
+        // Notification permission is independent: it only affects whether the foreground-service
+        // notification is visible and must not gate Bluetooth functionality.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

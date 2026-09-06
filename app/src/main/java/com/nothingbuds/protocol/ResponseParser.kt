@@ -9,7 +9,8 @@ object ResponseParser {
 
     private const val TAG = "ResponseParser"
     private const val HEADER_SIZE = 8
-    private const val MIN_PACKET_SIZE = HEADER_SIZE + 2 // Header + CRC
+    private const val MIN_PACKET_SIZE = HEADER_SIZE // Header only; CRC presence is signaled by control bit5
+    private const val MASK_CRC_PRESENT = 0x20
 
     data class BatteryStatus(
         val left: Int = -1,           // -1 means disconnected
@@ -58,25 +59,35 @@ object ResponseParser {
             return null
         }
 
-        val command = (data[3].toInt() and 0xFF) or ((data[4].toInt() and 0xFF) shl 8)
-        val payloadLength = data[5].toInt() and 0xFF
+        val control = (data[1].toInt() and 0xFF) or ((data[2].toInt() and 0xFF) shl 8)
+        val crcPresent = (control and MASK_CRC_PRESENT) != 0
 
-        if (data.size < HEADER_SIZE + payloadLength + 2) {
-            Log.w(TAG, "Packet truncated: expected ${HEADER_SIZE + payloadLength + 2}, got ${data.size}")
+        val command = (data[3].toInt() and 0xFF) or ((data[4].toInt() and 0xFF) shl 8)
+        val payloadLength = (data[5].toInt() and 0xFF) or
+                ((data[6].toInt() and 0xFF) shl 8) // 16-bit little-endian per re/SMART_DIAL.md
+
+        val totalLength = HEADER_SIZE + payloadLength + (if (crcPresent) 2 else 0) // + CRC16 LE
+
+        if (data.size < totalLength) {
+            Log.w(TAG, "Packet truncated: expected $totalLength, got ${data.size}")
             return null
         }
 
         val payload = data.copyOfRange(HEADER_SIZE, HEADER_SIZE + payloadLength)
 
-        // Verify CRC (optional, for debugging)
-        val dataWithoutCrc = data.copyOfRange(0, HEADER_SIZE + payloadLength)
-        val expectedCrc = CRC16.calculate(dataWithoutCrc)
-        val actualCrc = (data[HEADER_SIZE + payloadLength].toInt() and 0xFF) or
-                ((data[HEADER_SIZE + payloadLength + 1].toInt() and 0xFF) shl 8)
+        // The app always writes with the CRC bit set (control 0x0160) and devices echo the
+        // header on responses (re/SMART_DIAL.md:224), so valid responses carry a CRC16.
+        // Reject packets whose CRC does not match instead of applying partial device state.
+        if (crcPresent) {
+            val dataWithoutCrc = data.copyOfRange(0, HEADER_SIZE + payloadLength)
+            val expectedCrc = CRC16.calculate(dataWithoutCrc)
+            val actualCrc = (data[HEADER_SIZE + payloadLength].toInt() and 0xFF) or
+                    ((data[HEADER_SIZE + payloadLength + 1].toInt() and 0xFF) shl 8)
 
-        if (expectedCrc != actualCrc) {
-            Log.w(TAG, "CRC mismatch: expected $expectedCrc, got $actualCrc")
-            // Continue anyway, some devices have buggy CRC
+            if (expectedCrc != actualCrc) {
+                Log.w(TAG, "CRC mismatch: expected $expectedCrc, got $actualCrc (cmd 0x${command.toString(16)}, payload $payloadLength bytes)")
+                return null
+            }
         }
 
         return ParsedResponse(command, payload)
@@ -294,19 +305,19 @@ object ResponseParser {
     fun parseGestures(payload: ByteArray): List<GestureSlot> {
         if (payload.size < 1) return emptyList()
         val count = payload[0].toInt() and 0xFF
-        val result = ArrayList<GestureSlot>(count.coerceAtMost(payload.size / 4))
-        for (i in 0 until count) {
+        val expectedSize = 1 + count * 4
+        if (payload.size < expectedSize) {
+            Log.w(TAG, "Malformed gesture report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            return emptyList()
+        }
+        return List(count) { i ->
             val offset = 1 + i * 4
-            if (offset + 3 >= payload.size) break
-            result.add(
-                GestureSlot(
-                    side = payload[offset].toInt() and 0xFF,
-                    type = payload[offset + 2].toInt() and 0xFF,
-                    action = payload[offset + 3].toInt() and 0xFF,
-                )
+            GestureSlot(
+                side = payload[offset].toInt() and 0xFF,
+                type = payload[offset + 2].toInt() and 0xFF,
+                action = payload[offset + 3].toInt() and 0xFF,
             )
         }
-        return result
     }
 
     /**
@@ -315,12 +326,16 @@ object ResponseParser {
      * group of (slot type, red, green, blue).
      */
     fun parseCaseLed(payload: ByteArray): List<Int> {
-        if (payload.size < 2) return emptyList()
+        if (payload.size < 1) return emptyList()
         val count = payload[0].toInt() and 0xFF
+        val expectedSize = 1 + count * 4
+        if (payload.size < expectedSize) {
+            Log.w(TAG, "Malformed case-LED report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            return emptyList()
+        }
         val result = ArrayList<Int>(count)
         for (i in 0 until count) {
             val offset = 1 + i * 4
-            if (offset + 3 >= payload.size) break
             val r = payload[offset + 1].toInt() and 0xFF
             val g = payload[offset + 2].toInt() and 0xFF
             val b = payload[offset + 3].toInt() and 0xFF
@@ -336,32 +351,39 @@ object ResponseParser {
     }
 
     /**
-     * A single multipoint device from the dual-device list. Each entry is 7 bytes: a 6-byte MAC
-     * and then a type/role byte. `isConnected` marks the device that is currently reporting a
-     * link; `isCurrent` the one actively outputting audio.
+     * A single entry from the dual-device list. Each entry is 7 bytes: a 6-byte MAC followed by a
+     * status byte. The official app (`EarDualList`, referenced by
+     * proto-src/com/nothing/elekid/dual/DualConnectViewModel.java) partitions entries into
+     * "connected"/"not" but that class is not in the repository's decompiled dump, so the exact
+     * meaning of the status byte is NOT confirmed. [flags] preserves the raw value without claiming
+     * semantics; it never drives the dual toggle.
      */
     data class DualDevice(
         val id: Int,
         val mac: String,
-        val isConnected: Boolean,
+        val flags: Int,
     )
 
     /**
-     * GET_DUAL_DEVICE_LIST reply is a count byte followed by 7-byte entries `[MAC x6, type]`.
-     * The type byte is only trusted to *suggest* status (historically ambiguous), so it is read
-     * as `isConnected` for display without ever driving the enabled toggle.
+     * GET_DUAL_DEVICE_LIST reply. The query carries the package index ([0] for the first page, see
+     * DualConnectViewModel) and slots are 7 bytes `[MAC x6, status]`. The status byte's meaning is
+     * unconfirmed (see [DualDevice]); only entries that fit the fixed structure are kept.
      */
     fun parseDualDeviceList(payload: ByteArray): List<DualDevice> {
         if (payload.size < 1) return emptyList()
         val count = payload[0].toInt() and 0xFF
-        val result = ArrayList<DualDevice>(count.coerceAtMost((payload.size - 1) / 7))
+        val expectedSize = 1 + count * 7
+        if (payload.size < expectedSize) {
+            Log.w(TAG, "Malformed dual-device report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            return emptyList()
+        }
+        val result = ArrayList<DualDevice>(count)
         for (i in 0 until count) {
             val offset = 1 + i * 7
-            if (offset + 6 >= payload.size) break
             val macBytes = payload.copyOfRange(offset, offset + 6)
-            val type = payload[offset + 6].toInt() and 0xFF
+            val flags = payload[offset + 6].toInt() and 0xFF
             val mac = macBytes.joinToString(":") { "%02X".format(it) }
-            result.add(DualDevice(id = i, mac = mac, isConnected = type != 0))
+            result.add(DualDevice(id = i, mac = mac, flags = flags))
         }
         return result
     }

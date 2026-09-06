@@ -45,9 +45,13 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(context, serviceIntent)
+            // A boot-time start can be refused on Android 12+ if the app is background-restricted;
+            // wrap it so an IllegalStateException cannot crash the process.
+            runCatching { ContextCompat.startForegroundService(context, serviceIntent) }
+                .onFailure { Log.w(TAG, "Could not start service at boot", it) }
         } else {
-            context.startService(serviceIntent)
+            runCatching { context.startService(serviceIntent) }
+                .onFailure { Log.w(TAG, "Could not start service at boot", it) }
         }
     }
 }

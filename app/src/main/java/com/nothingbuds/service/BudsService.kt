@@ -254,15 +254,32 @@ class BudsService : Service() {
                 updateNotification()
             }
             ACTION_SEND_RAW -> {
-                intent.getStringExtra(EXTRA_RAW_HEX)?.let { hex ->
-                    sendCommand(hex.hexToBytes())
+                val hex = intent.getStringExtra(EXTRA_RAW_HEX)
+                if (hex != null) {
+                    val frame = hex.parseHexOrNull()
+                    when {
+                        frame == null -> Log.w(TAG, "Rejecting raw action: invalid hex")
+                        !isValidRawFrame(frame) -> Log.w(TAG, "Rejecting raw action: malformed frame")
+                        !BudsRepository.state.value.isConnected ->
+                            Log.w(TAG, "Rejecting raw action: not connected")
+                        else -> sendCommand(frame)
+                    }
                 }
             }
             ACTION_SEND_COMMAND -> {
                 val command = intent.getStringExtra(EXTRA_COMMAND_HEX)?.toIntOrNull(16)
-                if (command != null) {
-                    val payload = intent.getStringExtra(EXTRA_PAYLOAD_HEX).orEmpty()
-                    sendCommand(PacketBuilder.build(command, payload.hexToBytes()))
+                if (command == null || command < 0 || command > 0xFFFF) {
+                    Log.w(TAG, "Rejecting command action: command must be 16-bit")
+                } else {
+                    val payloadBytes = intent.getStringExtra(EXTRA_PAYLOAD_HEX)
+                        .orEmpty()
+                        .parseHexOrNull()
+                    when {
+                        payloadBytes == null -> Log.w(TAG, "Rejecting command action: invalid payload hex")
+                        !BudsRepository.state.value.isConnected ->
+                            Log.w(TAG, "Rejecting command action: not connected")
+                        else -> sendCommand(PacketBuilder.build(command, payloadBytes))
+                    }
                 }
             }
             else -> {
@@ -678,8 +695,10 @@ class BudsService : Service() {
                             // Check if we have enough data for header
                             if (accLen < 8) break
 
-                            val payloadLen = acc[5].toInt() and 0xFF
-                            val packetLen = 8 + payloadLen + 2 // header + payload + crc
+                            val payloadLen = (acc[5].toInt() and 0xFF) or
+                                    ((acc[6].toInt() and 0xFF) shl 8) // 16-bit LE length
+                            val crcPresent = (acc[1].toInt() and 0x20) != 0 // control bit5 signals CRC16
+                            val packetLen = 8 + payloadLen + (if (crcPresent) 2 else 0) // header + payload (+ crc)
                             if (accLen < packetLen) break
 
                             val packet = acc.copyOf(packetLen)
@@ -761,6 +780,10 @@ class BudsService : Service() {
     }
 
     private fun handleResponse(data: ByteArray) {
+        if (!BudsRepository.state.value.isConnected) {
+            Log.d(TAG, "Dropping response, not connected.")
+            return
+        }
         val response = ResponseParser.parse(data) ?: return
 
         Log.d(TAG, "Parsed response - command: 0x${response.command.toString(16)}, payload: ${response.payload.toHexString()}")
@@ -1362,10 +1385,35 @@ class BudsService : Service() {
     private fun ByteArray.toHexString(): String {
         return joinToString("") { "%02x".format(it) }
     }
+}
 
-    private fun String.hexToBytes(): ByteArray {
-        val clean = filter { !it.isWhitespace() }
-        if (clean.isEmpty()) return ByteArray(0)
-        return clean.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+/**
+ * Safely parses a hex string into bytes. Returns null on any malformed input (non-hex
+ * nibbles or odd length) instead of throwing NumberFormatException.
+ */
+internal fun String.parseHexOrNull(): ByteArray? {
+    val clean = filter { !it.isWhitespace() }
+    if (clean.isEmpty()) return ByteArray(0)
+    if (clean.length % 2 != 0) return null
+    val result = ByteArray(clean.length / 2)
+    for (i in result.indices) {
+        val hi = Character.digit(clean[i * 2], 16)
+        val lo = Character.digit(clean[i * 2 + 1], 16)
+        if (hi < 0 || lo < 0) return null
+        result[i] = ((hi shl 4) or lo).toByte()
     }
+    return result
+}
+
+/**
+ * Sanity-checks a caller-supplied raw frame against the wire format before sending:
+ * SOF 0x55, header present, and the 16-bit LE length field agreeing with the real size
+ * (including CRC16 when control bit5 is set). Rejects obviously malformed input.
+ */
+internal fun isValidRawFrame(frame: ByteArray): Boolean {
+    if (frame.isEmpty() || frame[0] != 0x55.toByte()) return false
+    if (frame.size < 8) return false
+    val lengthField = (frame[5].toInt() and 0xFF) or ((frame[6].toInt() and 0xFF) shl 8)
+    val crcPresent = (frame[1].toInt() and 0x20) != 0
+    return frame.size == 8 + lengthField + (if (crcPresent) 2 else 0)
 }

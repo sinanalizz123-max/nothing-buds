@@ -4,7 +4,6 @@ import com.nothingbuds.protocol.PacketBuilder
 
 import android.content.Context
 import android.os.Build
-import com.nothingbuds.protocol.PacketBuilder
 
 interface DefaultOp {
     /** @param button 10 for the Elekid "magic" / "Nothing button"; 0 otherwise. */

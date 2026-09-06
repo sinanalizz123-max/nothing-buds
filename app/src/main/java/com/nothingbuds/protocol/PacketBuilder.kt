@@ -6,7 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * Builds packets for Nothing/CMF earbuds protocol.
  *
  * Packet structure:
- * - Header (8 bytes): [0x55, 0x60, 0x01, cmd_low, cmd_high, payload_len, 0x00, op_id]
+ * - Header (8 bytes): [0x55, 0x60, 0x01, cmd_low, cmd_high, len_low, len_high, op_id]
+ * - Length bytes 5..6 are a 16-bit little-endian payload size (see re/SMART_DIAL.md)
  * - Payload (variable)
  * - CRC16 (2 bytes, little-endian)
  */
@@ -29,8 +30,8 @@ object PacketBuilder {
             0x01.toByte(),                          // Protocol version
             (command and 0xFF).toByte(),            // Command low byte
             ((command shr 8) and 0xFF).toByte(),    // Command high byte
-            payload.size.toByte(),                  // Payload length
-            0x00.toByte(),                          // Reserved
+            (payload.size and 0xFF).toByte(),       // Payload length low byte
+            ((payload.size shr 8) and 0xFF).toByte(), // Payload length high byte (LE 16-bit)
             opId.toByte()                           // Operation ID
         )
 
@@ -85,7 +86,7 @@ object PacketBuilder {
 
     fun readDual(): ByteArray = build(Commands.READ_DUAL)
 
-    fun readDualDeviceList(): ByteArray = build(Commands.READ_DUAL_DEVICE_LIST)
+    fun readDualDeviceList(): ByteArray = build(Commands.READ_DUAL_DEVICE_LIST, byteArrayOf(0))
 
     fun readDiracEq(): ByteArray = build(Commands.READ_DIRAC_EQ)
 
