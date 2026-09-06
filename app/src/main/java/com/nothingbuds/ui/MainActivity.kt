@@ -151,10 +151,10 @@ class MainActivity : ComponentActivity() {
                         composable("eq") {
                             EQScreen(
                                 state = state,
-                                onSetPreset = { preset -> budsService?.setEqPreset(preset) },
-                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
-                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
-                                onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
+                                onSetPreset = { preset, aid -> budsService?.setEqPreset(preset, aid) },
+                                onSetDiracEq = { level, aid -> budsService?.setDiracEq(level, aid) },
+                                onSetDiracCustomEq = { bass, mid, treble, aid -> budsService?.setDiracCustomEq(bass, mid, treble, aid) },
+                                onSetCustomEq = { bands, aid -> budsService?.setCustomEq(bands, aid) },
                                 onBack = { navController.popBackStack() }
                             )
                         }

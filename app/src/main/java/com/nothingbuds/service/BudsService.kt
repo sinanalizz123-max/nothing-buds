@@ -29,6 +29,7 @@ import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import com.nothingbuds.protocol.ResponseParser
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -819,7 +820,12 @@ class BudsService : Service() {
             Commands.RESPONSE_EQ -> {
                 val eqPreset = ResponseParser.parseEq(response.payload)
                 Log.d(TAG, "EQ Preset: $eqPreset")
+                val aid = takeEqAction(Commands.RESPONSE_EQ) ?: "poll"
+                val prev = BudsRepository.state.value.eqPreset
+                Log.d(TAG, "[STANDARD_EQ][$aid] RX STANDARD_EQ cmd=0x${response.command.toString(16)} " +
+                    "payload=${response.payload.toHexString()} parsed={preset=$eqPreset}")
                 updateState { it.copy(eqPreset = eqPreset) }
+                Log.d(TAG, "[EQ_STATE][$aid] eqPreset: $prev -> $eqPreset")
             }
 
             Commands.RESPONSE_FIRMWARE -> {
@@ -884,6 +890,9 @@ class BudsService : Service() {
             Commands.RESPONSE_ADVANCED_EQ_VALUES -> {
                 val bands = ResponseParser.parseCustomEq(response.payload)
                 Log.d(TAG, "Custom EQ: ${bands.joinToString()}")
+                val aid = takeEqAction(Commands.RESPONSE_ADVANCED_EQ_VALUES) ?: "poll"
+                Log.d(TAG, "[ADVANCED_EQ][$aid] RX ADVANCED_EQ cmd=0x${response.command.toString(16)} " +
+                    "payload=${response.payload.toHexString()} parsed={bands=${bands.joinToString()}}")
                 updateState { it.copy(customEq = bands) }
             }
 
@@ -908,13 +917,16 @@ class BudsService : Service() {
             Commands.RESPONSE_DIRAC_EQ -> {
                 val dirac = ResponseParser.parseDiracEq(response.payload)
                 Log.d(TAG, "Dirac EQ: preset=$dirac")
-                Log.d(TAG, "Dirac RX cmd=0x${response.command.toString(16)} " +
+                val aid = takeEqAction(Commands.RESPONSE_DIRAC_EQ) ?: "poll"
+                val prevDirac = BudsRepository.state.value.diracEq
+                Log.d(TAG, "[DIRAC][$aid] RX DIRAC cmd=0x${response.command.toString(16)} " +
                     "payload=${response.payload.toHexString()} " +
                     "parsed={level=$dirac, preset=${DiracEqPreset.fromLevel(dirac).displayName}}")
                 // The 0xC050 reading is an active Dirac-Opteo level (0 Dirac Opteo, 1 Rock,
                 // 2 Electronic, 3 Pop, 4 Enhance Vocals, 5 Classical, 6 Custom); the EQ screen
                 // maps it back to a row via DiracEqPreset.fromLevel().
                 updateState { it.copy(diracEq = dirac) }
+                Log.d(TAG, "[EQ_STATE][$aid] diracEq: $prevDirac -> $dirac")
             }
 
             Commands.ACK_SET_DUAL -> {
@@ -925,6 +937,10 @@ class BudsService : Service() {
 
             Commands.ACK_SET_EQ -> {
                 Log.d(TAG, "SET_EQ ack")
+                val aid = takeEqAction(Commands.ACK_SET_EQ) ?: "poll"
+                val status = response.payload.firstOrNull()?.toInt()
+                Log.d(TAG, "[STANDARD_EQ][$aid] RX ACK cmd=0x${response.command.toString(16)} " +
+                    "payload=${response.payload.toHexString()} ackStatus=$status")
                 sendCommand(PacketBuilder.readEq())
             }
 
@@ -935,6 +951,10 @@ class BudsService : Service() {
 
             Commands.ACK_SET_DIRAC_EQ -> {
                 Log.d(TAG, "SET_DIRAC_EQ ack")
+                val aid = takeEqAction(Commands.ACK_SET_DIRAC_EQ) ?: "poll"
+                val status = response.payload.firstOrNull()?.toInt()
+                Log.d(TAG, "[DIRAC][$aid] RX ACK cmd=0x${response.command.toString(16)} " +
+                    "payload=${response.payload.toHexString()} ackStatus=$status")
                 sendCommand(PacketBuilder.readDiracEq())
             }
 
@@ -1072,18 +1092,40 @@ class BudsService : Service() {
         )
     }
 
-    fun setEqPreset(preset: EqPreset) {
-        Log.d(TAG, "Setting EQ preset: $preset")
-        // Standard equalizer models only (0xF010). Dirac-capable models (B172/B168) run
-        // their whole preset list through setDiracEq() (0xF01D) instead.
-        sendCommand(PacketBuilder.setEq(preset))
-        updateState { it.copy(eqPreset = preset) }
+    /** Diagnostic only: expected-response command -> EQ action id, for TX/RX log correlation. */
+    private val pendingEqResponse = ConcurrentHashMap<Int, String>()
+
+    private fun expectEqResponse(actionId: String, vararg commands: Int) {
+        for (cmd in commands) pendingEqResponse[cmd] = actionId
     }
 
-    fun setCustomEq(bands: IntArray) {
+    private fun takeEqAction(command: Int): String? = pendingEqResponse.remove(command)
+
+    fun setEqPreset(preset: EqPreset, actionId: String = "A0") {
+        Log.d(TAG, "Setting EQ preset: $preset")
+        val prev = BudsRepository.state.value.eqPreset
+        // Standard equalizer models only (0xF010). Dirac-capable models (B172/B168) run
+        // their whole preset list through setDiracEq() (0xF01D) instead.
+        val frame = PacketBuilder.setEq(preset)
+        Log.d(TAG, "[STANDARD_EQ][$actionId] TX STANDARD_EQ cmd=0xF010 " +
+            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
+            "parsed={preset=$preset} expected=ACK_SET_EQ+RSP_EQ")
+        expectEqResponse(actionId, Commands.ACK_SET_EQ, Commands.RESPONSE_EQ)
+        sendCommand(frame)
+        updateState { it.copy(eqPreset = preset) }
+        Log.d(TAG, "[EQ_STATE][$actionId] eqPreset: $prev -> $preset stored=last_eq_preset")
+    }
+
+    fun setCustomEq(bands: IntArray, actionId: String = "A0") {
         Log.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
-        sendCommand(PacketBuilder.setCustomEq(bands))
+        val frame = PacketBuilder.setCustomEq(bands)
+        Log.d(TAG, "[ADVANCED_EQ][$actionId] TX ADVANCED_EQ cmd=0xF06D " +
+            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
+            "parsed={bands=${bands.joinToString()}} expected=RSP_ADVANCED_EQ_VALUES")
+        expectEqResponse(actionId, Commands.RESPONSE_ADVANCED_EQ_VALUES)
+        sendCommand(frame)
         updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
+        Log.d(TAG, "[EQ_STATE][$actionId] customEq updated bands=${bands.size} eqPreset -> CUSTOM")
     }
 
     fun setInEarDetection(enabled: Boolean) {
@@ -1139,22 +1181,29 @@ class BudsService : Service() {
         sendCommand(PacketBuilder.setConnectDevice(bytes))
     }
 
-    fun setDiracEq(level: Int) {
+    fun setDiracEq(level: Int, actionId: String = "A0") {
         Log.d(TAG, "Setting Dirac EQ: $level")
+        val prev = BudsRepository.state.value.diracEq
         val frame = PacketBuilder.setDiracEq(level)
-        Log.d(TAG, "Dirac TX cmd=0xF01D payload=${frame.diracPayloadHex()} " +
-            "parsed={level=$level, preset=${DiracEqPreset.fromLevel(level).displayName}}")
+        Log.d(TAG, "[DIRAC][$actionId] TX DIRAC cmd=0xF01D " +
+            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
+            "parsed={preset=${DiracEqPreset.fromLevel(level).displayName},type=$level} " +
+            "expected=ACK_SET_DIRAC_EQ+RSP_DIRAC_EQ")
+        expectEqResponse(actionId, Commands.ACK_SET_DIRAC_EQ, Commands.RESPONSE_DIRAC_EQ)
         sendCommand(frame)
         updateState { it.copy(diracEq = level) }
+        Log.d(TAG, "[EQ_STATE][$actionId] diracEq: $prev -> $level stored=last_dirac_eq")
     }
 
-    fun setDiracCustomEq(bass: Int, mid: Int, treble: Int) {
+    fun setDiracCustomEq(bass: Int, mid: Int, treble: Int, actionId: String = "A0") {
         Log.d(TAG, "Setting Dirac custom EQ: bass=$bass mid=$mid treble=$treble")
         val frame = PacketBuilder.setDiracCustomEq(bass, mid, treble)
-        Log.d(TAG, "Dirac TX cmd=0xF041 payload=${frame.diracPayloadHex()} " +
-            "parsed={bass=$bass, mid=$mid, treble=$treble}")
+        Log.d(TAG, "[CUSTOM_EQ][$actionId] TX CUSTOM_EQ cmd=0xF041 " +
+            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
+            "parsed={bass=$bass, mid=$mid, treble=$treble} expected=none (no readback path)")
         sendCommand(frame)
         updateState { it.copy(diracCustomEq = intArrayOf(bass, mid, treble)) }
+        Log.d(TAG, "[EQ_STATE][$actionId] diracCustomEq -> [$bass, $mid, $treble]")
     }
 
     /** Payload bytes (frame minus 8-byte header and 2-byte CRC) as hex, for Dirac diagnostics. */
