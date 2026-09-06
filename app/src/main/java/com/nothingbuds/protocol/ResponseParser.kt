@@ -1,6 +1,6 @@
 package com.nothingbuds.protocol
 
-import com.nothingbuds.util.AppLog
+import android.util.Log
 
 /**
  * Parses responses from Nothing/CMF earbuds.
@@ -49,13 +49,13 @@ object ResponseParser {
      */
     fun parse(data: ByteArray): ParsedResponse? {
         if (data.size < MIN_PACKET_SIZE) {
-            AppLog.w(TAG, "Packet too small: ${data.size} bytes")
+            Log.w(TAG, "Packet too small: ${data.size} bytes")
             return null
         }
 
         // Check magic bytes
         if (data[0] != 0x55.toByte()) {
-            AppLog.w(TAG, "Invalid magic byte: ${data[0]}")
+            Log.w(TAG, "Invalid magic byte: ${data[0]}")
             return null
         }
 
@@ -69,7 +69,7 @@ object ResponseParser {
         val totalLength = HEADER_SIZE + payloadLength + (if (crcPresent) 2 else 0) // + CRC16 LE
 
         if (data.size < totalLength) {
-            AppLog.w(TAG, "Packet truncated: expected $totalLength, got ${data.size}")
+            Log.w(TAG, "Packet truncated: expected $totalLength, got ${data.size}")
             return null
         }
 
@@ -85,7 +85,7 @@ object ResponseParser {
                     ((data[HEADER_SIZE + payloadLength + 1].toInt() and 0xFF) shl 8)
 
             if (expectedCrc != actualCrc) {
-                AppLog.w(TAG, "CRC mismatch: expected $expectedCrc, got $actualCrc (cmd 0x${command.toString(16)}, payload $payloadLength bytes)")
+                Log.w(TAG, "CRC mismatch: expected $expectedCrc, got $actualCrc (cmd 0x${command.toString(16)}, payload $payloadLength bytes)")
                 return null
             }
         }
@@ -307,7 +307,7 @@ object ResponseParser {
         val count = payload[0].toInt() and 0xFF
         val expectedSize = 1 + count * 4
         if (payload.size < expectedSize) {
-            AppLog.w(TAG, "Malformed gesture report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            Log.w(TAG, "Malformed gesture report: count=$count needs $expectedSize bytes, got ${payload.size}")
             return emptyList()
         }
         return List(count) { i ->
@@ -330,7 +330,7 @@ object ResponseParser {
         val count = payload[0].toInt() and 0xFF
         val expectedSize = 1 + count * 4
         if (payload.size < expectedSize) {
-            AppLog.w(TAG, "Malformed case-LED report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            Log.w(TAG, "Malformed case-LED report: count=$count needs $expectedSize bytes, got ${payload.size}")
             return emptyList()
         }
         val result = ArrayList<Int>(count)
@@ -374,7 +374,7 @@ object ResponseParser {
         val count = payload[0].toInt() and 0xFF
         val expectedSize = 1 + count * 7
         if (payload.size < expectedSize) {
-            AppLog.w(TAG, "Malformed dual-device report: count=$count needs $expectedSize bytes, got ${payload.size}")
+            Log.w(TAG, "Malformed dual-device report: count=$count needs $expectedSize bytes, got ${payload.size}")
             return emptyList()
         }
         val result = ArrayList<DualDevice>(count)

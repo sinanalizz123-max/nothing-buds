@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.nothingbuds.util.AppLog
+import android.util.Log
 import androidx.core.content.ContextCompat
 
 class BootReceiver : BroadcastReceiver() {
@@ -22,14 +22,14 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
 
-        AppLog.d(TAG, "Boot completed, checking auto-connect settings")
+        Log.d(TAG, "Boot completed, checking auto-connect settings")
 
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val autoConnect = prefs.getBoolean(PREF_AUTO_CONNECT, true)
         val lastDeviceAddress = prefs.getString(PREF_LAST_DEVICE, null)
 
         if (!autoConnect) {
-            AppLog.d(TAG, "Auto-connect disabled, not starting service")
+            Log.d(TAG, "Auto-connect disabled, not starting service")
             return
         }
 
@@ -39,19 +39,19 @@ class BootReceiver : BroadcastReceiver() {
         if (lastDeviceAddress != null) {
             serviceIntent.action = BudsService.ACTION_CONNECT
             serviceIntent.putExtra(BudsService.EXTRA_DEVICE_ADDRESS, lastDeviceAddress)
-            AppLog.d(TAG, "Starting service with auto-connect to: $lastDeviceAddress")
+            Log.d(TAG, "Starting service with auto-connect to: $lastDeviceAddress")
         } else {
-            AppLog.d(TAG, "Starting service without auto-connect (no last device)")
+            Log.d(TAG, "Starting service without auto-connect (no last device)")
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // A boot-time start can be refused on Android 12+ if the app is background-restricted;
             // wrap it so an IllegalStateException cannot crash the process.
             runCatching { ContextCompat.startForegroundService(context, serviceIntent) }
-                .onFailure { AppLog.w(TAG, "Could not start service at boot", it) }
+                .onFailure { Log.w(TAG, "Could not start service at boot", it) }
         } else {
             runCatching { context.startService(serviceIntent) }
-                .onFailure { AppLog.w(TAG, "Could not start service at boot", it) }
+                .onFailure { Log.w(TAG, "Could not start service at boot", it) }
         }
     }
 }

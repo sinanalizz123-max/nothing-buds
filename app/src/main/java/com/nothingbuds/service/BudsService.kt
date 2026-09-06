@@ -18,7 +18,7 @@ import android.media.ToneGenerator
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import com.nothingbuds.util.AppLog
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.data.DeviceModels
@@ -29,7 +29,6 @@ import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import com.nothingbuds.protocol.ResponseParser
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -159,7 +158,7 @@ class BudsService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        AppLog.d(TAG, "Service created")
+        Log.d(TAG, "Service created")
 
         reconnectJob?.cancel()
         reconnectJob = null
@@ -167,7 +166,7 @@ class BudsService : Service() {
 
         // Load saved state to show last known values while connecting
         loadSavedState()?.let { savedState ->
-            AppLog.d(TAG, "Loaded saved state: ${savedState.deviceName}, ANC=${savedState.ancMode}")
+            Log.d(TAG, "Loaded saved state: ${savedState.deviceName}, ANC=${savedState.ancMode}")
             BudsRepository.set(savedState)
         }
 
@@ -178,7 +177,7 @@ class BudsService : Service() {
         // right now — if a freshly born process catches this before the permission is in place the
         // system throws, so degrade to stopSelf() instead of crashing the app.
         if (!safeStartForeground()) {
-            AppLog.e(TAG, "Cannot run as a foreground service without Bluetooth permission; stopping")
+            Log.e(TAG, "Cannot run as a foreground service without Bluetooth permission; stopping")
             stopSelf()
             return
         }
@@ -200,7 +199,7 @@ class BudsService : Service() {
             // First try to connect to saved device
             val savedAddress = getSavedDeviceAddress()
             if (savedAddress != null && !BudsRepository.state.value.isConnected) {
-                AppLog.d(TAG, "Trying to connect to saved device: $savedAddress")
+                Log.d(TAG, "Trying to connect to saved device: $savedAddress")
                 connect(savedAddress)
             } else {
                 checkConnectedDevices()
@@ -211,7 +210,7 @@ class BudsService : Service() {
             // reconnect loop keeps waiting for it (reboots are normal on codec/dual changes).
             delay(CONNECT_GRACE_MS)
             if (!BudsRepository.state.value.isConnected && getSavedDeviceAddress() == null) {
-                AppLog.d(TAG, "No earbuds connected within grace period, stopping")
+                Log.d(TAG, "No earbuds connected within grace period, stopping")
                 stopNotification()
             }
         }
@@ -225,7 +224,7 @@ class BudsService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        AppLog.d(TAG, "onStartCommand: ${intent?.action}")
+        Log.d(TAG, "onStartCommand: ${intent?.action}")
         // After Context.startForegroundService() every delivered command must call startForeground()
         // — even when the service is already foreground. Skipping it on a start that lands while the
         // service is already running crashes with ForegroundServiceDidNotStartInTimeException
@@ -260,10 +259,10 @@ class BudsService : Service() {
                 if (hex != null) {
                     val frame = hex.parseHexOrNull()
                     when {
-                        frame == null -> AppLog.w(TAG, "Rejecting raw action: invalid hex")
-                        !isValidRawFrame(frame) -> AppLog.w(TAG, "Rejecting raw action: malformed frame")
+                        frame == null -> Log.w(TAG, "Rejecting raw action: invalid hex")
+                        !isValidRawFrame(frame) -> Log.w(TAG, "Rejecting raw action: malformed frame")
                         !BudsRepository.state.value.isConnected ->
-                            AppLog.w(TAG, "Rejecting raw action: not connected")
+                            Log.w(TAG, "Rejecting raw action: not connected")
                         else -> sendCommand(frame)
                     }
                 }
@@ -271,15 +270,15 @@ class BudsService : Service() {
             ACTION_SEND_COMMAND -> {
                 val command = intent.getStringExtra(EXTRA_COMMAND_HEX)?.toIntOrNull(16)
                 if (command == null || command < 0 || command > 0xFFFF) {
-                    AppLog.w(TAG, "Rejecting command action: command must be 16-bit")
+                    Log.w(TAG, "Rejecting command action: command must be 16-bit")
                 } else {
                     val payloadBytes = intent.getStringExtra(EXTRA_PAYLOAD_HEX)
                         .orEmpty()
                         .parseHexOrNull()
                     when {
-                        payloadBytes == null -> AppLog.w(TAG, "Rejecting command action: invalid payload hex")
+                        payloadBytes == null -> Log.w(TAG, "Rejecting command action: invalid payload hex")
                         !BudsRepository.state.value.isConnected ->
-                            AppLog.w(TAG, "Rejecting command action: not connected")
+                            Log.w(TAG, "Rejecting command action: not connected")
                         else -> sendCommand(PacketBuilder.build(command, payloadBytes))
                     }
                 }
@@ -293,14 +292,14 @@ class BudsService : Service() {
     }
 
     override fun onDestroy() {
-        AppLog.d(TAG, "Service destroyed")
+        Log.d(TAG, "Service destroyed")
         isDestroying = true
         reconnectJob?.cancel()
         reconnectJob = null
         try {
             unregisterReceiver(bluetoothReceiver)
         } catch (e: Exception) {
-            AppLog.e(TAG, "Error unregistering receiver", e)
+            Log.e(TAG, "Error unregistering receiver", e)
         }
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -315,15 +314,15 @@ class BudsService : Service() {
 
     private fun checkConnectedDevices() {
         if (!hasBluetoothPermission()) {
-            AppLog.w(TAG, "No Bluetooth permission")
+            Log.w(TAG, "No Bluetooth permission")
             return
         }
 
         // Check A2DP connected devices first
         a2dpProfile?.connectedDevices?.forEach { device ->
-            AppLog.d(TAG, "A2DP connected device: ${device.name}")
+            Log.d(TAG, "A2DP connected device: ${device.name}")
             if (isNothingDevice(device) && !BudsRepository.state.value.isConnected) {
-                AppLog.d(TAG, "Found Nothing/CMF device via A2DP: ${device.name}")
+                Log.d(TAG, "Found Nothing/CMF device via A2DP: ${device.name}")
                 connect(device.address)
                 return
             }
@@ -337,9 +336,9 @@ class BudsService : Service() {
     private fun onDeviceConnected(device: BluetoothDevice) {
         if (!hasBluetoothPermission()) return
 
-        AppLog.d(TAG, "Device connected: ${device.name}")
+        Log.d(TAG, "Device connected: ${device.name}")
         if (isNothingDevice(device) && !BudsRepository.state.value.isConnected) {
-            AppLog.d(TAG, "Nothing/CMF device connected, establishing SPP connection...")
+            Log.d(TAG, "Nothing/CMF device connected, establishing SPP connection...")
             // Small delay to let the device settle
             serviceScope.launch {
                 delay(2000)
@@ -351,10 +350,10 @@ class BudsService : Service() {
     private fun onDeviceDisconnected(device: BluetoothDevice) {
         if (!hasBluetoothPermission()) return
 
-        AppLog.d(TAG, "Device disconnected: ${device.name}")
+        Log.d(TAG, "Device disconnected: ${device.name}")
         // Match on the stable MAC rather than the mutable Bluetooth name.
         if (BudsRepository.state.value.deviceAddress == device.address) {
-            AppLog.d(TAG, "Our connected device disconnected")
+            Log.d(TAG, "Our connected device disconnected")
             softDisconnect()
         }
     }
@@ -368,12 +367,12 @@ class BudsService : Service() {
         serviceScope.launch {
             // Prevent multiple simultaneous connection attempts
             if (isConnecting) {
-                AppLog.d(TAG, "Already connecting, ignoring...")
+                Log.d(TAG, "Already connecting, ignoring...")
                 return@launch
             }
 
             if (BudsRepository.state.value.isConnected) {
-                AppLog.d(TAG, "Already connected")
+                Log.d(TAG, "Already connected")
                 return@launch
             }
 
@@ -383,13 +382,13 @@ class BudsService : Service() {
             val bluetoothAdapter = bluetoothManager.adapter
 
             if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-                AppLog.e(TAG, "Bluetooth not available or not enabled")
+                Log.e(TAG, "Bluetooth not available or not enabled")
                 isConnecting = false
                 return@launch
             }
 
             if (!hasBluetoothPermission()) {
-                AppLog.e(TAG, "Missing Bluetooth permission")
+                Log.e(TAG, "Missing Bluetooth permission")
                 isConnecting = false
                 return@launch
             }
@@ -403,7 +402,7 @@ class BudsService : Service() {
                         break
                     }
                     if (attempt > 1) {
-                        AppLog.d(TAG, "Retry $attempt/$CONNECT_MAX_ATTEMPTS")
+                        Log.d(TAG, "Retry $attempt/$CONNECT_MAX_ATTEMPTS")
                         delay(CONNECT_RETRY_BASE_MS * (attempt - 1))
                     }
                     try {
@@ -413,15 +412,15 @@ class BudsService : Service() {
                         }
                     } catch (e: Exception) {
                         // connectToDevice cleans up its local socket; log and back off.
-                        AppLog.w(TAG, "Connect attempt $attempt/$CONNECT_MAX_ATTEMPTS failed", e)
+                        Log.w(TAG, "Connect attempt $attempt/$CONNECT_MAX_ATTEMPTS failed", e)
                     }
                 }
                 if (!connected) {
-                    AppLog.w(TAG, "All connect attempts exhausted")
+                    Log.w(TAG, "All connect attempts exhausted")
                     softDisconnect()
                 }
             } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to connect", e)
+                Log.e(TAG, "Failed to connect", e)
                 updateState { it.copy(isConnected = false) }
             } finally {
                 isConnecting = false
@@ -433,7 +432,7 @@ class BudsService : Service() {
         if (!hasBluetoothPermission()) return false
 
         try {
-            AppLog.d(TAG, "Connecting to ${device.name} (${device.address})")
+            Log.d(TAG, "Connecting to ${device.name} (${device.address})")
 
             // Wait a bit for the audio connection to stabilize
             delay(1000)
@@ -444,13 +443,13 @@ class BudsService : Service() {
             // Method 1: Standard SPP UUID
             if (!connected) {
                 try {
-                    AppLog.d(TAG, "Trying SPP UUID connection...")
+                    Log.d(TAG, "Trying SPP UUID connection...")
                     bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
                     bluetoothSocket?.connect()
                     connected = true
-                    AppLog.d(TAG, "SPP UUID connection successful")
+                    Log.d(TAG, "SPP UUID connection successful")
                 } catch (e: Exception) {
-                    AppLog.w(TAG, "SPP UUID connection failed: ${e.message}")
+                    Log.w(TAG, "SPP UUID connection failed: ${e.message}")
                     bluetoothSocket?.close()
                     bluetoothSocket = null
                 }
@@ -459,13 +458,13 @@ class BudsService : Service() {
             // Method 2: Insecure RFCOMM
             if (!connected) {
                 try {
-                    AppLog.d(TAG, "Trying insecure RFCOMM connection...")
+                    Log.d(TAG, "Trying insecure RFCOMM connection...")
                     bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
                     bluetoothSocket?.connect()
                     connected = true
-                    AppLog.d(TAG, "Insecure RFCOMM connection successful")
+                    Log.d(TAG, "Insecure RFCOMM connection successful")
                 } catch (e: Exception) {
-                    AppLog.w(TAG, "Insecure RFCOMM connection failed: ${e.message}")
+                    Log.w(TAG, "Insecure RFCOMM connection failed: ${e.message}")
                     bluetoothSocket?.close()
                     bluetoothSocket = null
                 }
@@ -474,24 +473,24 @@ class BudsService : Service() {
             // Method 3: Reflection fallback (port 1)
             if (!connected) {
                 try {
-                    AppLog.d(TAG, "Trying reflection fallback...")
+                    Log.d(TAG, "Trying reflection fallback...")
                     val method = device.javaClass.getMethod("createRfcommSocket", Int::class.java)
                     bluetoothSocket = method.invoke(device, 1) as BluetoothSocket
                     bluetoothSocket?.connect()
                     connected = true
-                    AppLog.d(TAG, "Reflection fallback connection successful")
+                    Log.d(TAG, "Reflection fallback connection successful")
                 } catch (e: Exception) {
-                    AppLog.w(TAG, "Reflection fallback failed: ${e.message}")
+                    Log.w(TAG, "Reflection fallback failed: ${e.message}")
                     bluetoothSocket?.close()
                     bluetoothSocket = null
                 }
             }
 
             if (!connected) {
-                AppLog.w(TAG, "All connection methods failed")
+                Log.w(TAG, "All connection methods failed")
                 return false
             }
-            AppLog.d(TAG, "Socket connected!")
+            Log.d(TAG, "Socket connected!")
 
             inputStream = bluetoothSocket?.inputStream
             outputStream = bluetoothSocket?.outputStream
@@ -526,7 +525,7 @@ class BudsService : Service() {
             return true
 
         } catch (e: Exception) {
-            AppLog.e(TAG, "Connection failed: ${e.message}", e)
+            Log.e(TAG, "Connection failed: ${e.message}", e)
             // Tear down any partial socket so a retry starts from a clean slate. The caller
             // decides whether to retry or give up, so we do not stop the service here.
             try {
@@ -545,7 +544,7 @@ class BudsService : Service() {
         reconnectJob?.cancel()
         reconnectJob = null
         isConnecting = false
-        AppLog.d(TAG, "Disconnecting...")
+        Log.d(TAG, "Disconnecting...")
         readJob?.cancel()
         pollJob?.cancel()
         writeJob?.cancel()
@@ -560,7 +559,7 @@ class BudsService : Service() {
             outputStream?.close()
             bluetoothSocket?.close()
         } catch (e: IOException) {
-            AppLog.e(TAG, "Error closing socket", e)
+            Log.e(TAG, "Error closing socket", e)
         }
 
         inputStream = null
@@ -580,7 +579,7 @@ class BudsService : Service() {
     private fun softDisconnect() {
         reconnectJob?.cancel()
         isConnecting = false
-        AppLog.d(TAG, "Soft disconnect - scheduling reconnect")
+        Log.d(TAG, "Soft disconnect - scheduling reconnect")
         readJob?.cancel()
         pollJob?.cancel()
         writeJob?.cancel()
@@ -594,7 +593,7 @@ class BudsService : Service() {
             outputStream?.close()
             bluetoothSocket?.close()
         } catch (e: IOException) {
-            AppLog.e(TAG, "Error closing socket", e)
+            Log.e(TAG, "Error closing socket", e)
         }
 
         inputStream = null
@@ -613,7 +612,7 @@ class BudsService : Service() {
         // waiting on the buds instead of silently shutting down.
         runCatching {
             startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
-        }.onFailure { AppLog.e(TAG, "Could not stay foreground during reconnect; continuing in background", it) }
+        }.onFailure { Log.e(TAG, "Could not stay foreground during reconnect; continuing in background", it) }
 
         reconnectJob = serviceScope.launch {
             var attempt = 0
@@ -627,13 +626,13 @@ class BudsService : Service() {
                 val saved = getSavedDeviceAddress()
                 if (adapter != null && adapter.isEnabled && saved != null && hasBluetoothPermission()) {
                     attempt++
-                    AppLog.d(TAG, "Reconnect attempt $attempt/$RECONNECT_MAX_ATTEMPTS -> $saved")
+                    Log.d(TAG, "Reconnect attempt $attempt/$RECONNECT_MAX_ATTEMPTS -> $saved")
                     connect(saved)
                 }
                 nextDelay = minOf(RECONNECT_MAX_BACKOFF_MS, nextDelay + RECONNECT_INITIAL_DELAY_MS)
             }
             if (!BudsRepository.state.value.isConnected) {
-                AppLog.d(TAG, "Reconnect attempts exhausted, going quiet")
+                Log.d(TAG, "Reconnect attempts exhausted, going quiet")
                 stopNotification()
             }
         }
@@ -667,7 +666,7 @@ class BudsService : Service() {
                 try {
                     val bytesRead = inputStream?.read(readBuffer) ?: -1
                     if (bytesRead > 0) {
-                        AppLog.d(TAG, "Received $bytesRead bytes")
+                        Log.d(TAG, "Received $bytesRead bytes")
 
                         if (accLen + bytesRead > acc.size) {
                             acc = acc.copyOf(maxOf(acc.size * 2, accLen + bytesRead))
@@ -710,13 +709,13 @@ class BudsService : Service() {
                             handleResponse(packet)
                         }
                     } else if (bytesRead < 0) {
-                        AppLog.w(TAG, "Read returned -1, connection closed")
+                        Log.w(TAG, "Read returned -1, connection closed")
                         if (isActive) softDisconnect()
                         break
                     }
                 } catch (e: IOException) {
                     if (isActive) {
-                        AppLog.e(TAG, "Read error: ${e.message}")
+                        Log.e(TAG, "Read error: ${e.message}")
                         softDisconnect()
                     }
                     break
@@ -730,7 +729,7 @@ class BudsService : Service() {
             while (isActive && BudsRepository.state.value.isConnected) {
                 delay(30000) // Poll every 30 seconds
                 if (BudsRepository.state.value.isConnected) {
-                    AppLog.d(TAG, "Polling status...")
+                    Log.d(TAG, "Polling status...")
                     sendCommand(PacketBuilder.readBattery())
                     sendCommand(PacketBuilder.readAnc())
                 }
@@ -739,7 +738,7 @@ class BudsService : Service() {
     }
 
     private suspend fun initializeDevice() {
-        AppLog.d(TAG, "Initializing device...")
+        Log.d(TAG, "Initializing device...")
         // Order mirrors the official app: identity first, then the settings the UI shows.
         val opening = listOf(
             PacketBuilder.readBattery(),
@@ -783,17 +782,17 @@ class BudsService : Service() {
 
     private fun handleResponse(data: ByteArray) {
         if (!BudsRepository.state.value.isConnected) {
-            AppLog.d(TAG, "Dropping response, not connected.")
+            Log.d(TAG, "Dropping response, not connected.")
             return
         }
         val response = ResponseParser.parse(data) ?: return
 
-        AppLog.d(TAG, "Parsed response - command: 0x${response.command.toString(16)}, payload: ${response.payload.toHexString()}")
+        Log.d(TAG, "Parsed response - command: 0x${response.command.toString(16)}, payload: ${response.payload.toHexString()}")
 
         when (response.command) {
             Commands.RESPONSE_BATTERY, Commands.RESPONSE_PUSH_BATTERY, Commands.PUSH_BATTERY -> {
                 val battery = ResponseParser.parseBattery(response.payload)
-                AppLog.d(TAG, "Battery: L=${battery.left}%, R=${battery.right}%, Case=${battery.case}%")
+                Log.d(TAG, "Battery: L=${battery.left}%, R=${battery.right}%, Case=${battery.case}%")
                 updateState { it.copy(battery = battery) }
                 updateNotification()
             }
@@ -801,7 +800,7 @@ class BudsService : Service() {
             Commands.RESPONSE_ANC, Commands.RESPONSE_PUSH_ANC, Commands.PUSH_ANC -> {
                 val ancState = ResponseParser.parseAncState(response.payload)
                 if (ancState != null) {
-                    AppLog.d(TAG, "ANC state: mode=${ancState.mode}, level=${ancState.ancLevel}")
+                    Log.d(TAG, "ANC state: mode=${ancState.mode}, level=${ancState.ancLevel}")
                     updateState { it.copy(ancMode = ancState.mode, ancLevel = ancState.ancLevel) }
                     updateNotification()
                 }
@@ -809,7 +808,7 @@ class BudsService : Service() {
 
             Commands.ACK_SET_ANC -> {
                 val status = response.payload.firstOrNull()?.toInt() ?: 0
-                AppLog.d(TAG, "SET_ANC ack status=$status")
+                Log.d(TAG, "SET_ANC ack status=$status")
                 if (status == 0) {
                     // The earbuds push the new state right after, but ask anyway so a rejected
                     // write cannot leave the UI showing something that never took effect.
@@ -819,43 +818,38 @@ class BudsService : Service() {
 
             Commands.RESPONSE_EQ -> {
                 val eqPreset = ResponseParser.parseEq(response.payload)
-                AppLog.d(TAG, "EQ Preset: $eqPreset")
-                val aid = takeEqAction(Commands.RESPONSE_EQ) ?: "poll"
-                val prev = BudsRepository.state.value.eqPreset
-                AppLog.d(TAG, "[STANDARD_EQ][$aid] RX STANDARD_EQ cmd=0x${response.command.toString(16)} " +
-                    "payload=${response.payload.toHexString()} parsed={preset=$eqPreset}")
+                Log.d(TAG, "EQ Preset: $eqPreset")
                 updateState { it.copy(eqPreset = eqPreset) }
-                AppLog.d(TAG, "[EQ_STATE][$aid] eqPreset: $prev -> $eqPreset")
             }
 
             Commands.RESPONSE_FIRMWARE -> {
                 val firmware = ResponseParser.parseAsciiString(response.payload)
                     .ifEmpty { ResponseParser.parseFirmware(response.payload) }
-                AppLog.d(TAG, "Firmware: $firmware")
+                Log.d(TAG, "Firmware: $firmware")
                 updateState { it.copy(firmwareVersion = firmware) }
             }
 
             Commands.RESPONSE_CONFIGURATION -> {
                 val configuration = ResponseParser.parseAsciiString(response.payload)
-                AppLog.d(TAG, "Configuration: $configuration")
+                Log.d(TAG, "Configuration: $configuration")
                 updateState { it.copy(configuration = configuration) }
             }
 
             Commands.RESPONSE_EXTRA_FEATURES -> {
                 val inEar = ResponseParser.parseInEarFromExtraFeatures(response.payload)
-                AppLog.d(TAG, "In-Ear Detection: $inEar")
+                Log.d(TAG, "In-Ear Detection: $inEar")
                 if (inEar != null) updateState { it.copy(inEarDetection = inEar) }
             }
 
             Commands.RESPONSE_LOW_LATENCY -> {
                 val latency = ResponseParser.parseLatency(response.payload)
-                AppLog.d(TAG, "Low Latency: $latency")
+                Log.d(TAG, "Low Latency: $latency")
                 updateState { it.copy(lowLatencyMode = latency) }
             }
 
             Commands.RESPONSE_BASS_BOOST -> {
                 val bass = ResponseParser.parseBassBoost(response.payload)
-                AppLog.d(TAG, "Bass boost: $bass")
+                Log.d(TAG, "Bass boost: $bass")
                 if (bass != null) {
                     updateState { it.copy(enhancedBass = bass.enabled, bassLevel = bass.level) }
                 }
@@ -863,7 +857,7 @@ class BudsService : Service() {
 
             Commands.RESPONSE_BASS_ENHANCER -> {
                 val bass = ResponseParser.parseBassEnhancer(response.payload)
-                AppLog.d(TAG, "Bass enhancer: $bass")
+                Log.d(TAG, "Bass enhancer: $bass")
                 if (bass != null) {
                     updateState { it.copy(enhancedBass = bass.enabled, bassLevel = bass.level) }
                 }
@@ -883,83 +877,66 @@ class BudsService : Service() {
                 } else {
                     response.payload.firstOrNull()?.toInt() == 1
                 }
-                AppLog.d(TAG, "Spatial audio: $enabled")
+                Log.d(TAG, "Spatial audio: $enabled")
                 updateState { it.copy(spatialAudio = enabled) }
             }
 
             Commands.RESPONSE_ADVANCED_EQ_VALUES -> {
                 val bands = ResponseParser.parseCustomEq(response.payload)
-                AppLog.d(TAG, "Custom EQ: ${bands.joinToString()}")
-                val aid = takeEqAction(Commands.RESPONSE_ADVANCED_EQ_VALUES) ?: "poll"
-                AppLog.d(TAG, "[ADVANCED_EQ][$aid] RX ADVANCED_EQ cmd=0x${response.command.toString(16)} " +
-                    "payload=${response.payload.toHexString()} parsed={bands=${bands.joinToString()}}")
+                Log.d(TAG, "Custom EQ: ${bands.joinToString()}")
                 updateState { it.copy(customEq = bands) }
             }
 
             Commands.RESPONSE_GESTURES -> {
                 val gestures = ResponseParser.parseGestures(response.payload)
-                AppLog.d(TAG, "Gestures: ${gestures.joinToString { "side=${it.side} type=${it.type} act=${it.action}" }}")
+                Log.d(TAG, "Gestures: ${gestures.joinToString { "side=${it.side} type=${it.type} act=${it.action}" }}")
                 updateState { it.copy(gestures = gestures) }
             }
 
             Commands.RESPONSE_DUAL -> {
                 val dual = ResponseParser.parseBoolean(response.payload)
-                AppLog.d(TAG, "Dual device: $dual")
+                Log.d(TAG, "Dual device: $dual")
                 updateState { it.copy(dualDevice = dual) }
             }
 
             Commands.RESPONSE_DUAL_DEVICE_LIST -> {
                 val devices = ResponseParser.parseDualDeviceList(response.payload)
-                AppLog.d(TAG, "Dual device list: ${devices.joinToString { it.mac }}")
+                Log.d(TAG, "Dual device list: ${devices.joinToString { it.mac }}")
                 updateState { it.copy(dualDevices = devices) }
             }
 
             Commands.RESPONSE_DIRAC_EQ -> {
                 val dirac = ResponseParser.parseDiracEq(response.payload)
-                AppLog.d(TAG, "Dirac EQ: preset=$dirac")
-                val aid = takeEqAction(Commands.RESPONSE_DIRAC_EQ) ?: "poll"
-                val prevDirac = BudsRepository.state.value.diracEq
-                AppLog.d(TAG, "[DIRAC][$aid] RX DIRAC cmd=0x${response.command.toString(16)} " +
-                    "payload=${response.payload.toHexString()} " +
-                    "parsed={level=$dirac, preset=${DiracEqPreset.fromLevel(dirac).displayName}}")
+                Log.d(TAG, "Dirac EQ: preset=$dirac")
                 // The 0xC050 reading is an active Dirac-Opteo level (0 Dirac Opteo, 1 Rock,
                 // 2 Electronic, 3 Pop, 4 Enhance Vocals, 5 Classical, 6 Custom); the EQ screen
                 // maps it back to a row via DiracEqPreset.fromLevel().
                 updateState { it.copy(diracEq = dirac) }
-                AppLog.d(TAG, "[EQ_STATE][$aid] diracEq: $prevDirac -> $dirac")
             }
 
             Commands.ACK_SET_DUAL -> {
-                AppLog.d(TAG, "SET_DUAL ack")
+                Log.d(TAG, "SET_DUAL ack")
                 // The earbuds restart after a dual toggle; re-read the list once it is back.
                 sendCommand(PacketBuilder.readDualDeviceList())
             }
 
             Commands.ACK_SET_EQ -> {
-                AppLog.d(TAG, "SET_EQ ack")
-                val aid = takeEqAction(Commands.ACK_SET_EQ) ?: "poll"
-                val status = response.payload.firstOrNull()?.toInt()
-                AppLog.d(TAG, "[STANDARD_EQ][$aid] RX ACK cmd=0x${response.command.toString(16)} " +
-                    "payload=${response.payload.toHexString()} ackStatus=$status")
+                Log.d(TAG, "SET_EQ ack")
                 sendCommand(PacketBuilder.readEq())
             }
 
             Commands.ACK_SET_CONNECT_DEVICE -> {
-                AppLog.d(TAG, "SET_CONNECT_DEVICE ack")
+                Log.d(TAG, "SET_CONNECT_DEVICE ack")
                 sendCommand(PacketBuilder.readDualDeviceList())
             }
 
             Commands.ACK_SET_DIRAC_EQ -> {
-                AppLog.d(TAG, "SET_DIRAC_EQ ack")
-                val aid = takeEqAction(Commands.ACK_SET_DIRAC_EQ) ?: "poll"
-                val status = response.payload.firstOrNull()?.toInt()
-                AppLog.d(TAG, "[DIRAC][$aid] RX ACK cmd=0x${response.command.toString(16)} " +
-                    "payload=${response.payload.toHexString()} ackStatus=$status")
+                Log.d(TAG, "SET_DIRAC_EQ ack")
                 sendCommand(PacketBuilder.readDiracEq())
             }
 
             Commands.ACK_SET_GESTURES -> {
-                AppLog.d(TAG, "SET_GESTURES ack")
+                Log.d(TAG, "SET_GESTURES ack")
                 // The case reboots to apply writes and can drop a slot; re-read so the UI never
                 // shows a configuration the earbuds did not keep.
                 sendCommand(PacketBuilder.readGestures())
@@ -967,19 +944,19 @@ class BudsService : Service() {
 
             Commands.RESPONSE_LHDC -> {
                 val lhdc = ResponseParser.parseLhdc(response.payload)
-                AppLog.d(TAG, "LHDC: $lhdc")
+                Log.d(TAG, "LHDC: $lhdc")
                 updateState { it.copy(lhdc = lhdc) }
             }
 
             Commands.RESPONSE_POWER_OFF -> {
                 val minutes = ResponseParser.parsePowerOff(response.payload)
-                AppLog.d(TAG, "Auto power off: $minutes min")
+                Log.d(TAG, "Auto power off: $minutes min")
                 updateState { it.copy(autoPowerOffMinutes = minutes) }
             }
 
             Commands.RESPONSE_CASE_LED -> {
                 val colors = ResponseParser.parseCaseLed(response.payload)
-                AppLog.d(TAG, "Case LED colors: ${colors.size}")
+                Log.d(TAG, "Case LED colors: ${colors.size}")
                 // Only remember a color when the report actually carried any LEDs.
                 if (colors.isNotEmpty()) {
                     updateState { it.copy(caseLedColor = colors.first()) }
@@ -988,7 +965,7 @@ class BudsService : Service() {
 
             Commands.RESPONSE_DETAIL_ENHANCEMENT -> {
                 val detail = ResponseParser.parseDetailEnhancement(response.payload)
-                AppLog.d(TAG, "Detail enhancement: enabled=${detail.enabled} level=${detail.level}")
+                Log.d(TAG, "Detail enhancement: enabled=${detail.enabled} level=${detail.level}")
                 updateState {
                     it.copy(detailEnhancement = detail.enabled, detailEnhancementLevel = detail.level)
                 }
@@ -997,7 +974,7 @@ class BudsService : Service() {
             Commands.PUSH_EAR_TIP_FIT, Commands.RESPONSE_PUSH_EAR_TIP_FIT -> {
                 val fit = ResponseParser.parseFitResult(response.payload)
                 if (fit != null) {
-                    AppLog.d(TAG, "Ear-tip fit result: left=${fit.left} right=${fit.right}")
+                    Log.d(TAG, "Ear-tip fit result: left=${fit.left} right=${fit.right}")
                     updateState {
                         it.copy(fitTestResult = fit)
                     }
@@ -1005,7 +982,7 @@ class BudsService : Service() {
             }
 
             else -> {
-                AppLog.d(TAG, "Unhandled response 0x${response.command.toString(16)}: " +
+                Log.d(TAG, "Unhandled response 0x${response.command.toString(16)}: " +
                         response.payload.toHexString())
             }
         }
@@ -1038,7 +1015,7 @@ class BudsService : Service() {
                 tone.release()
             }
         } catch (e: Exception) {
-            AppLog.w(TAG, "Could not play tone: ${e.message}")
+            Log.w(TAG, "Could not play tone: ${e.message}")
         }
     }
 
@@ -1051,17 +1028,17 @@ class BudsService : Service() {
         writeJob = serviceScope.launch {
             for (packet in commandChannel) {
                 if (!BudsRepository.state.value.isConnected) {
-                    AppLog.d(TAG, "Dropping queued command, not connected")
+                    Log.d(TAG, "Dropping queued command, not connected")
                     continue
                 }
                 try {
-                    AppLog.d(TAG, "Sending: ${packet.toHexString()}")
+                    Log.d(TAG, "Sending: ${packet.toHexString()}")
                     outputStream?.write(packet)
                     outputStream?.flush()
                 } catch (e: IOException) {
                     // A dead socket only surfaced on reads before, so putting an earbud in the case
                     // left the app claiming to be connected until something tried to read.
-                    AppLog.e(TAG, "Send failed, dropping the link: ${e.message}")
+                    Log.e(TAG, "Send failed, dropping the link: ${e.message}")
                     disconnect()
                     break
                 }
@@ -1073,7 +1050,7 @@ class BudsService : Service() {
     // Public methods for controlling earbuds
 
     fun setAncMode(mode: AncMode) {
-        AppLog.d(TAG, "Setting ANC mode: $mode")
+        Log.d(TAG, "Setting ANC mode: $mode")
         sendCommand(PacketBuilder.setAnc(mode))
         // Optimistically update state
         updateState { it.copy(ancMode = mode) }
@@ -1092,44 +1069,22 @@ class BudsService : Service() {
         )
     }
 
-    /** Diagnostic only: expected-response command -> EQ action id, for TX/RX log correlation. */
-    private val pendingEqResponse = ConcurrentHashMap<Int, String>()
-
-    private fun expectEqResponse(actionId: String, vararg commands: Int) {
-        for (cmd in commands) pendingEqResponse[cmd] = actionId
-    }
-
-    private fun takeEqAction(command: Int): String? = pendingEqResponse.remove(command)
-
-    fun setEqPreset(preset: EqPreset, actionId: String = "A0") {
-        AppLog.d(TAG, "Setting EQ preset: $preset")
-        val prev = BudsRepository.state.value.eqPreset
+    fun setEqPreset(preset: EqPreset) {
+        Log.d(TAG, "Setting EQ preset: $preset")
         // Standard equalizer models only (0xF010). Dirac-capable models (B172/B168) run
         // their whole preset list through setDiracEq() (0xF01D) instead.
-        val frame = PacketBuilder.setEq(preset)
-        AppLog.d(TAG, "[STANDARD_EQ][$actionId] TX STANDARD_EQ cmd=0xF010 " +
-            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
-            "parsed={preset=$preset} expected=ACK_SET_EQ+RSP_EQ")
-        expectEqResponse(actionId, Commands.ACK_SET_EQ, Commands.RESPONSE_EQ)
-        sendCommand(frame)
+        sendCommand(PacketBuilder.setEq(preset))
         updateState { it.copy(eqPreset = preset) }
-        AppLog.d(TAG, "[EQ_STATE][$actionId] eqPreset: $prev -> $preset stored=last_eq_preset")
     }
 
-    fun setCustomEq(bands: IntArray, actionId: String = "A0") {
-        AppLog.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
-        val frame = PacketBuilder.setCustomEq(bands)
-        AppLog.d(TAG, "[ADVANCED_EQ][$actionId] TX ADVANCED_EQ cmd=0xF06D " +
-            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
-            "parsed={bands=${bands.joinToString()}} expected=RSP_ADVANCED_EQ_VALUES")
-        expectEqResponse(actionId, Commands.RESPONSE_ADVANCED_EQ_VALUES)
-        sendCommand(frame)
+    fun setCustomEq(bands: IntArray) {
+        Log.d(TAG, "Setting custom EQ: ${bands.joinToString()}")
+        sendCommand(PacketBuilder.setCustomEq(bands))
         updateState { it.copy(customEq = bands, eqPreset = EqPreset.CUSTOM) }
-        AppLog.d(TAG, "[EQ_STATE][$actionId] customEq updated bands=${bands.size} eqPreset -> CUSTOM")
     }
 
     fun setInEarDetection(enabled: Boolean) {
-        AppLog.d(TAG, "Setting in-ear detection: $enabled")
+        Log.d(TAG, "Setting in-ear detection: $enabled")
         sendCommand(PacketBuilder.setInEarDetection(enabled))
         updateState { it.copy(inEarDetection = enabled) }
     }
@@ -1140,7 +1095,7 @@ class BudsService : Service() {
      * choice immediately; the next poll reconciles it with what the earbuds actually kept.
      */
     fun setGesture(side: Int, type: Int, action: Int) {
-        AppLog.d(TAG, "Setting gesture: side=$side type=$type action=$action")
+        Log.d(TAG, "Setting gesture: side=$side type=$type action=$action")
         if (side == PacketBuilder.SIDE_CASE) {
             // Case controls live on the case firmware and the case reboots to apply them.
             sendChangeWithTone { PacketBuilder.setGesture(side, type, action) }
@@ -1154,10 +1109,10 @@ class BudsService : Service() {
     }
 
     fun setDual(enabled: Boolean) {
-        AppLog.d(TAG, "Setting dual device: $enabled")
+        Log.d(TAG, "Setting dual device: $enabled")
         sendChangeWithTone { PacketBuilder.setDual(enabled) }
         updateState { it.copy(dualDevice = enabled) }
-        AppLog.d(TAG, "Dual toggle requires the earbuds to reboot; device will drop offline briefly")
+        Log.d(TAG, "Dual toggle requires the earbuds to reboot; device will drop offline briefly")
     }
 
     /** Switch which paired device multipoint is actively using. */
@@ -1174,76 +1129,59 @@ class BudsService : Service() {
         }
         if (bytes.size != 6) {
             // A malformed MAC (or one from a washed-out device) must never crash the picker.
-            AppLog.w(TAG, "Ignoring invalid dual device MAC: $mac")
+            Log.w(TAG, "Ignoring invalid dual device MAC: $mac")
             return
         }
-        AppLog.d(TAG, "Switching dual device to $mac")
+        Log.d(TAG, "Switching dual device to $mac")
         sendCommand(PacketBuilder.setConnectDevice(bytes))
     }
 
-    fun setDiracEq(level: Int, actionId: String = "A0") {
-        AppLog.d(TAG, "Setting Dirac EQ: $level")
-        val prev = BudsRepository.state.value.diracEq
-        val frame = PacketBuilder.setDiracEq(level)
-        AppLog.d(TAG, "[DIRAC][$actionId] TX DIRAC cmd=0xF01D " +
-            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
-            "parsed={preset=${DiracEqPreset.fromLevel(level).displayName},type=$level} " +
-            "expected=ACK_SET_DIRAC_EQ+RSP_DIRAC_EQ")
-        expectEqResponse(actionId, Commands.ACK_SET_DIRAC_EQ, Commands.RESPONSE_DIRAC_EQ)
-        sendCommand(frame)
+    fun setDiracEq(level: Int) {
+        Log.d(TAG, "Setting Dirac EQ: $level")
+        sendCommand(PacketBuilder.setDiracEq(level))
         updateState { it.copy(diracEq = level) }
-        AppLog.d(TAG, "[EQ_STATE][$actionId] diracEq: $prev -> $level stored=last_dirac_eq")
     }
 
-    fun setDiracCustomEq(bass: Int, mid: Int, treble: Int, actionId: String = "A0") {
-        AppLog.d(TAG, "Setting Dirac custom EQ: bass=$bass mid=$mid treble=$treble")
-        val frame = PacketBuilder.setDiracCustomEq(bass, mid, treble)
-        AppLog.d(TAG, "[CUSTOM_EQ][$actionId] TX CUSTOM_EQ cmd=0xF041 " +
-            "payload=${frame.diracPayloadHex()} frame=${frame.toHexString()} " +
-            "parsed={bass=$bass, mid=$mid, treble=$treble} expected=none (no readback path)")
-        sendCommand(frame)
+    fun setDiracCustomEq(bass: Int, mid: Int, treble: Int) {
+        Log.d(TAG, "Setting Dirac custom EQ: bass=$bass mid=$mid treble=$treble")
+        sendCommand(PacketBuilder.setDiracCustomEq(bass, mid, treble))
         updateState { it.copy(diracCustomEq = intArrayOf(bass, mid, treble)) }
-        AppLog.d(TAG, "[EQ_STATE][$actionId] diracCustomEq -> [$bass, $mid, $treble]")
     }
-
-    /** Payload bytes (frame minus 8-byte header and 2-byte CRC) as hex, for Dirac diagnostics. */
-    private fun ByteArray.diracPayloadHex(): String =
-        copyOfRange(8, size - 2).toHexString()
 
     fun setLhdc(enabled: Boolean) {
-        AppLog.d(TAG, "Setting LHDC: $enabled")
+        Log.d(TAG, "Setting LHDC: $enabled")
         sendChangeWithTone { PacketBuilder.setLhdc(enabled) }
         updateState { it.copy(lhdc = enabled) }
-        AppLog.d(TAG, "Codec change requires the earbuds to reboot; device will drop offline briefly")
+        Log.d(TAG, "Codec change requires the earbuds to reboot; device will drop offline briefly")
     }
 
     fun setAutoPowerOff(minutes: Int) {
-        AppLog.d(TAG, "Setting auto power off: $minutes")
+        Log.d(TAG, "Setting auto power off: $minutes")
         sendCommand(PacketBuilder.setAutoPowerOff(minutes))
         updateState { it.copy(autoPowerOffMinutes = minutes) }
     }
 
     fun setCaseLedColor(color: Int) {
-        AppLog.d(TAG, "Setting case LED color: #%06x".format(color and 0xFFFFFF))
+        Log.d(TAG, "Setting case LED color: #%06x".format(color and 0xFFFFFF))
         sendCommand(PacketBuilder.setCaseLedColor(color))
         updateState { it.copy(caseLedColor = color) }
     }
 
     fun setDetailEnhancement(enabled: Boolean, level: Int) {
-        AppLog.d(TAG, "Setting detail enhancement: enabled=$enabled level=$level")
+        Log.d(TAG, "Setting detail enhancement: enabled=$enabled level=$level")
         sendCommand(PacketBuilder.setDetailEnhancement(enabled, level))
         updateState { it.copy(detailEnhancement = enabled, detailEnhancementLevel = level) }
     }
 
     /** Triggers a seal check; the earbuds answer with PUSH_EAR_TIP_FIT. */
     fun startFitTest() {
-        AppLog.d(TAG, "Starting ear-tip fit test")
+        Log.d(TAG, "Starting ear-tip fit test")
         sendCommand(PacketBuilder.startFitTest())
         updateState { it.copy(fitTestResult = null) }
     }
 
     fun setLowLatencyMode(enabled: Boolean) {
-        AppLog.d(TAG, "Setting low latency: $enabled")
+        Log.d(TAG, "Setting low latency: $enabled")
         sendCommand(PacketBuilder.setLowLatency(enabled))
         updateState { it.copy(lowLatencyMode = enabled) }
     }
@@ -1254,7 +1192,7 @@ class BudsService : Service() {
      */
     fun setBassBoost(enabled: Boolean, level: Int = BudsRepository.state.value.bassLevel) {
         val effectiveLevel = if (enabled && level <= 0) 1 else level
-        AppLog.d(TAG, "Setting bass: enabled=$enabled level=$effectiveLevel")
+        Log.d(TAG, "Setting bass: enabled=$enabled level=$effectiveLevel")
 
         if (BudsRepository.state.value.deviceModel?.hasBassEnhancer == true) {
             sendCommand(PacketBuilder.setBassEnhancer(enabled, effectiveLevel))
@@ -1266,7 +1204,7 @@ class BudsService : Service() {
 
     /** Spatial audio runs alongside bass on these earbuds; neither write shuts the other off. */
     fun setSpatialAudio(enabled: Boolean) {
-        AppLog.d(TAG, "Setting spatial audio: $enabled")
+        Log.d(TAG, "Setting spatial audio: $enabled")
         sendCommand(PacketBuilder.setSpatialAudio(enabled))
         updateState { it.copy(spatialAudio = enabled) }
     }
@@ -1277,7 +1215,7 @@ class BudsService : Service() {
      * @param play true = start ringing, false = stop
      */
     fun findMyEarbuds(side: Int, play: Boolean = true) {
-        AppLog.d(TAG, "Find my earbuds: side=$side, play=$play")
+        Log.d(TAG, "Find my earbuds: side=$side, play=$play")
         if (side == 0 || !play) {
             // Stop both sides; the writer spaces them out.
             sendCommand(PacketBuilder.findDevice(1, false))
@@ -1351,7 +1289,7 @@ class BudsService : Service() {
             startForeground(NOTIFICATION_ID, notificationHelper.createConnectingNotification())
             true
         } catch (e: SecurityException) {
-            AppLog.e(TAG, "startForeground denied: ${e.message}")
+            Log.e(TAG, "startForeground denied: ${e.message}")
             false
         }
     }
@@ -1388,7 +1326,7 @@ class BudsService : Service() {
             putInt("last_battery_case", state.battery.case)
             apply()
         }
-        AppLog.d(TAG, "State saved: ANC=${state.ancMode}, EQ=${state.eqPreset}, Dirac=${state.diracEq}")
+        Log.d(TAG, "State saved: ANC=${state.ancMode}, EQ=${state.eqPreset}, Dirac=${state.diracEq}")
     }
 
     /**

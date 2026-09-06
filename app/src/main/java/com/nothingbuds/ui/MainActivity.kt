@@ -8,7 +8,7 @@ import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
-import com.nothingbuds.util.AppLog
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,14 +47,14 @@ class MainActivity : ComponentActivity() {
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            AppLog.d(TAG, "Service connected")
+            Log.d(TAG, "Service connected")
             val localBinder = binder as? BudsService.LocalBinder
             budsService = localBinder?.getService()
             isBound = true
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            AppLog.d(TAG, "Service disconnected")
+            Log.d(TAG, "Service disconnected")
             budsService = null
             isBound = false
         }
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
         // service can run. A denied POST_NOTIFICATIONS must not block earbud functionality.
         val btGranted = permissions[Manifest.permission.BLUETOOTH_CONNECT]
             ?: hasBluetoothConnectPermission()
-        AppLog.d(TAG, "Bluetooth CONNECT granted=$btGranted")
+        Log.d(TAG, "Bluetooth CONNECT granted=$btGranted")
         if (btGranted) {
             startAndBindService()
         }
@@ -76,13 +76,13 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        AppLog.d(TAG, "POST_NOTIFICATIONS granted=$granted")
+        Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        AppLog.d(TAG, "onCreate")
+        Log.d(TAG, "onCreate")
 
         requestPermissions()
 
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                                 currentState = state,
                                 connectedAdapters = connectedAdapters,
                                 onDeviceSelected = { device ->
-                                    AppLog.d(TAG, "Device selected: ${device.name}")
+                                    Log.d(TAG, "Device selected: ${device.name}")
                                     budsService?.connect(device.address)
                                     saveLastDevice(device.address)
                                     navController.popBackStack()
@@ -156,10 +156,10 @@ class MainActivity : ComponentActivity() {
                         composable("eq") {
                             EQScreen(
                                 state = state,
-                                onSetPreset = { preset, aid -> budsService?.setEqPreset(preset, aid) },
-                                onSetDiracEq = { level, aid -> budsService?.setDiracEq(level, aid) },
-                                onSetDiracCustomEq = { bass, mid, treble, aid -> budsService?.setDiracCustomEq(bass, mid, treble, aid) },
-                                onSetCustomEq = { bands, aid -> budsService?.setCustomEq(bands, aid) },
+                                onSetPreset = { preset -> budsService?.setEqPreset(preset) },
+                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
+                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
+                                onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -200,7 +200,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        AppLog.d(TAG, "onStart")
+        Log.d(TAG, "onStart")
         if (hasBluetoothConnectPermission()) {
             startAndBindService()
         }
@@ -208,7 +208,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        AppLog.d(TAG, "onStop")
+        Log.d(TAG, "onStop")
         if (isBound) {
             unbindService(serviceConnection)
             isBound = false
@@ -246,7 +246,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startAndBindService() {
-        AppLog.d(TAG, "startAndBindService")
+        Log.d(TAG, "startAndBindService")
         val intent = Intent(this, BudsService::class.java)
         ContextCompat.startForegroundService(this, intent)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)

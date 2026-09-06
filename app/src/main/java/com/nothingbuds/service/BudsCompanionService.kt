@@ -5,7 +5,7 @@ import android.companion.AssociationInfo
 import android.companion.CompanionDeviceService
 import android.content.Intent
 import android.os.Build
-import com.nothingbuds.util.AppLog
+import android.util.Log
 import androidx.annotation.RequiresApi
 
 /**
@@ -24,18 +24,18 @@ class BudsCompanionService : CompanionDeviceService() {
     @SuppressLint("MissingPermission")
     override fun onDeviceAppeared(associationInfo: AssociationInfo) {
         val address = associationInfo.deviceMacAddress?.toString()
-        AppLog.d(TAG, "Companion device appeared: $address")
+        Log.d(TAG, "Companion device appeared: $address")
 
         val intent = Intent(this, BudsService::class.java).apply {
             action = BudsService.ACTION_CONNECT
             putExtra(BudsService.EXTRA_DEVICE_ADDRESS, address)
         }
         runCatching { startForegroundService(intent) }
-            .onFailure { AppLog.w(TAG, "Could not start service", it) }
+            .onFailure { Log.w(TAG, "Could not start service", it) }
     }
 
     override fun onDeviceDisappeared(associationInfo: AssociationInfo) {
-        AppLog.d(TAG, "Companion device disappeared")
+        Log.d(TAG, "Companion device disappeared")
         runCatching {
             startService(
                 Intent(this, BudsService::class.java).setAction(BudsService.ACTION_DISCONNECT)
@@ -46,7 +46,7 @@ class BudsCompanionService : CompanionDeviceService() {
     @Deprecated("Kept for API 31 which still calls the string overloads")
     @Suppress("DEPRECATION")
     override fun onDeviceAppeared(address: String) {
-        AppLog.d(TAG, "Companion device appeared (legacy): $address")
+        Log.d(TAG, "Companion device appeared (legacy): $address")
         val intent = Intent(this, BudsService::class.java).apply {
             action = BudsService.ACTION_CONNECT
             putExtra(BudsService.EXTRA_DEVICE_ADDRESS, address)
@@ -57,7 +57,7 @@ class BudsCompanionService : CompanionDeviceService() {
     @Deprecated("Kept for API 31 which still calls the string overloads")
     @Suppress("DEPRECATION")
     override fun onDeviceDisappeared(address: String) {
-        AppLog.d(TAG, "Companion device disappeared (legacy): $address")
+        Log.d(TAG, "Companion device disappeared (legacy): $address")
         runCatching {
             startService(
                 Intent(this, BudsService::class.java).setAction(BudsService.ACTION_DISCONNECT)

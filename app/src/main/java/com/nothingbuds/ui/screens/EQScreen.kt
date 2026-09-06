@@ -1,6 +1,5 @@
 package com.nothingbuds.ui.screens
 
-import com.nothingbuds.util.AppLog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,45 +21,16 @@ import com.nothingbuds.ui.theme.NothingRed
 @Composable
 fun EQScreen(
     state: EarbudsState,
-    onSetPreset: (EqPreset, String) -> Unit,
-    onSetDiracEq: (Int, String) -> Unit,
-    onSetCustomEq: (IntArray, String) -> Unit,
-    onSetDiracCustomEq: (Int, Int, Int, String) -> Unit,
+    onSetPreset: (EqPreset) -> Unit,
+    onSetDiracEq: (Int) -> Unit,
+    onSetCustomEq: (IntArray) -> Unit,
+    onSetDiracCustomEq: (Int, Int, Int) -> Unit,
     onBack: () -> Unit
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
     var diracBands by remember { mutableStateOf(state.diracCustomEq.copyOf()) }
     val isDirac = state.deviceModel?.hasDiracEq == true
     var showDiracUnavailable by remember { mutableStateOf(false) }
-    var eqActionSeq by remember { mutableStateOf(0) }
-    fun nextAid(): String {
-        eqActionSeq += 1
-        return "A$eqActionSeq"
-    }
-    val selectedLabel = if (isDirac) {
-        diracRowName(DiracEqPreset.fromLevel(state.diracEq))
-    } else {
-        getPresetDisplayName(state.eqPreset)
-    }
-    val customVisible = state.deviceModel?.hasCustomEq == true &&
-        (!isDirac || DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM)
-
-    LaunchedEffect(Unit) {
-        AppLog.d("EQ_UI", "[EQ_UI] screen opened model=${state.deviceModel?.id} " +
-            "diracCapable=$isDirac eqPreset=${state.eqPreset} diracEq=${state.diracEq} " +
-            "selected=$selectedLabel")
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            AppLog.d("EQ_UI", "[EQ_UI] screen leaves model=${state.deviceModel?.id}")
-        }
-    }
-    LaunchedEffect(selectedLabel) {
-        AppLog.d("EQ_UI", "[EQ_UI] UI selection updated=$selectedLabel")
-    }
-    LaunchedEffect(customVisible) {
-        AppLog.d("EQ_UI", "[EQ_UI] Custom panel visible=$customVisible")
-    }
 
     Scaffold(
         topBar = {
@@ -106,21 +76,13 @@ fun EQScreen(
                         isSelected = DiracEqPreset.fromLevel(state.diracEq) == preset,
                         enabled = true,
                         onClick = {
-                            val aid = nextAid()
-                            val prev = DiracEqPreset.fromLevel(state.diracEq)
-                            val index = diracRowOrder.indexOf(preset)
-                            AppLog.d("EQ_UI", "[EQ][$aid] User selected ${diracRowName(preset)}")
-                            AppLog.d("EQ_UI", "[EQ][$aid] previous=${diracRowName(prev)} " +
-                                "requested=${diracRowName(preset)} type=${preset.type} " +
-                                "index=$index changed=${prev != preset}")
                             if (preset == DiracEqPreset.OPTEO && state.lhdc) {
                                 // Matches the official app: tapping Dirac while LDAC is on
                                 // shows the "…is unavailable while LDAC is on" dialog and does not
                                 // send anything to the earbuds.
-                                AppLog.d("EQ_UI", "[EQ][$aid] Dirac row blocked by LDAC (no TX)")
                                 showDiracUnavailable = true
                             } else {
-                                onSetDiracEq(preset.type, aid)
+                                onSetDiracEq(preset.type)
                             }
                         }
                     )
@@ -132,15 +94,7 @@ fun EQScreen(
                         description = getPresetDescription(preset),
                         isSelected = state.eqPreset == preset,
                         enabled = true,
-                        onClick = {
-                            val aid = nextAid()
-                            val index = EqPreset.entries.indexOf(preset)
-                            AppLog.d("EQ_UI", "[EQ][$aid] User selected ${getPresetDisplayName(preset)}")
-                            AppLog.d("EQ_UI", "[EQ][$aid] previous=${getPresetDisplayName(state.eqPreset)} " +
-                                "requested=${getPresetDisplayName(preset)} " +
-                                "index=$index changed=${state.eqPreset != preset}")
-                            onSetPreset(preset, aid)
-                        }
+                        onClick = { onSetPreset(preset) }
                     )
                 }
             }
@@ -185,19 +139,12 @@ fun EQScreen(
                                         EqBandSlider(
                                             value = diracBands[index],
                                             onValueChange = { newValue ->
-                                                val old = diracBands[index]
                                                 diracBands = diracBands.copyOf().also {
                                                     it[index] = newValue
                                                 }
-                                                AppLog.d("EQ_UI", "[EQ_UI] Dirac Custom $label: $old -> $newValue " +
-                                                    "current={bass=${diracBands[0]},mid=${diracBands[1]},treble=${diracBands[2]}} " +
-                                                    "atLimit=${newValue == 6 || newValue == -6}")
                                             },
                                             onValueChangeFinished = {
-                                                val aid = nextAid()
-                                                AppLog.d("EQ_UI", "[EQ][$aid] Dirac Custom action " +
-                                                    "current={bass=${diracBands[0]},mid=${diracBands[1]},treble=${diracBands[2]}}")
-                                                onSetDiracCustomEq(diracBands[0], diracBands[1], diracBands[2], aid)
+                                                onSetDiracCustomEq(diracBands[0], diracBands[1], diracBands[2])
                                             }
                                         )
 
@@ -217,10 +164,8 @@ fun EQScreen(
 
                             OutlinedButton(
                                 onClick = {
-                                    val aid = nextAid()
                                     diracBands = IntArray(3) { 0 }
-                                    AppLog.d("EQ_UI", "[EQ][$aid] Dirac Custom reset current={bass=0,mid=0,treble=0}")
-                                    onSetDiracCustomEq(0, 0, 0, aid)
+                                    onSetDiracCustomEq(0, 0, 0)
                                 },
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             ) {
@@ -242,18 +187,12 @@ fun EQScreen(
                                         EqBandSlider(
                                             value = customBands[index],
                                             onValueChange = { newValue ->
-                                                val old = customBands[index]
                                                 customBands = customBands.copyOf().also {
                                                     it[index] = newValue
                                                 }
-                                                AppLog.d("EQ_UI", "[EQ_UI] Advanced Custom band $index ($freq): " +
-                                                    "$old -> $newValue atLimit=${newValue == 6 || newValue == -6}")
                                             },
                                             onValueChangeFinished = {
-                                                val aid = nextAid()
-                                                AppLog.d("EQ_UI", "[EQ][$aid] Advanced Custom action " +
-                                                    "current={${customBands.joinToString()}}")
-                                                onSetCustomEq(customBands, aid)
+                                                onSetCustomEq(customBands)
                                             }
                                         )
 
@@ -274,10 +213,8 @@ fun EQScreen(
                         // Reset button
                             OutlinedButton(
                                 onClick = {
-                                    val aid = nextAid()
                                     customBands = IntArray(8) { 0 }
-                                    AppLog.d("EQ_UI", "[EQ][$aid] Advanced Custom reset")
-                                    onSetCustomEq(customBands, aid)
+                                    onSetCustomEq(customBands)
                                 },
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             ) {

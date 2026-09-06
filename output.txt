@@ -456,3 +456,27 @@ Verification:
   sources synced back verbatim.
 
 Confidence: 100% (build-verified, tests green, protocol per re/ research).
+
+Task 13 — Remove development diagnostic logging (production cleanup)
+STATUS: DONE
+Removed (diagnostic only, no behavior/protocol/UI changes):
+- Deleted util/AppLog.kt and AppLogTests.kt (central ring-buffer logger + tests).
+- BudsService.kt: removed TX/RX/STATE trace lines ([EQ]/[DIRAC]/[STANDARD_EQ]/
+  [CUSTOM_EQ]/[ADVANCED_EQ]/[EQ_STATE]), action-ID params + threading, pending-ACK
+  correlation map/helpers, diracPayloadHex helper. Setters/handlers keep their
+  original single-line logs; packets and state updates byte-identical.
+- EQScreen.kt + MainActivity.kt: removed screen/action/slider/transition trace
+  logs and action-ID callback params (signatures restored).
+- ResponseParser/BootReceiver/BudsCompanionService/BluetoothConnectionReceiver/
+  CompanionPairing: AppLog.* reverted to android.util.Log (messages unchanged).
+- SettingsScreen.kt: log export restored to original logcat + tag-filter pipeline.
+Kept: essential Log.d/Log.w/Log.e production logging, all features, all protocol
+bytes, RebootGate, EQ/Dirac/menu implementations, remaining unit tests.
+
+Verification:
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug` -> BUILD SUCCESSFUL.
+- Unit test report: 31 tests, 0 failures, 0 errors (17 protocol + 7 routing +
+  3 noise + 4 reboot gate). AppLogTests removed with AppLog.
+- Built APK copied to debug/app-debug.apk.
+
+Confidence: 100% (build-verified, tests green, diff is logging-only).
