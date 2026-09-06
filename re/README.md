@@ -44,3 +44,11 @@ separately from `app/` and is never packaged or compiled into any APK.
 
 The files here are derived from a user-installed copy of the Nothing X app for personal
 interoperability research.
+## Structured EQ knowledge base (added 2026-09-06)
+
+The cumulative, cross-checked EQ findings now live in section docs under `re/`
+(see `INDEX.md` for navigation). Raw extracts (`dirac-src`, `proto-src`,
+`ldac-src`, `control-src`, `case-src`, `proto2-src`, dex/zips, `*-src` trees)
+are preserved untouched as evidence. High-level historical reports remain in
+`.ai/` with "Status / Changes Since Previous Report" sections pointing here.
+Another AI should start at `re/INDEX.md`.
