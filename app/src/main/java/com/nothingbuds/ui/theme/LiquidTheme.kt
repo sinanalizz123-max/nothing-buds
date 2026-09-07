@@ -120,6 +120,7 @@ fun Modifier.appBackdropSource(backdrop: LayerBackdrop): Modifier =
 fun Modifier.liquidGlass(
     backdrop: LayerBackdrop,
     shape: Shape,
+    scrim: Color = Color.Black.copy(alpha = 0.28f),
 ): Modifier = this.drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
@@ -134,7 +135,7 @@ fun Modifier.liquidGlass(
         lens(size.minDimension / 4f, size.minDimension / 2f, false)
     },
     onDrawSurface = {
-        drawRect(Color.Black.copy(alpha = 0.28f))
+        drawRect(scrim)
     },
 )
 

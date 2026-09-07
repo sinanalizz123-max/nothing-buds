@@ -149,7 +149,7 @@ fun LiquidGlassTabBar(
         animationSpec = LiquidTheme.SpringSpec,
         label = "tabIndicator"
     )
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .then(
@@ -160,32 +160,51 @@ fun LiquidGlassTabBar(
             )
             .padding(4.dp)
     ) {
-        val segW = maxWidth / options.size
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .fillMaxWidth(1f / options.size)
-                .offset(x = segW * indicatorFraction)
-                .then(
-                    if (backdrop != null) Modifier.liquidGlass(backdrop, capsuleShape)
-                    else Modifier.background(Color(0x1FFFFFFF), capsuleShape)
-                )
-                .border(1.dp, Color(0x33FFFFFF), capsuleShape)
-        )
-        Row(modifier = Modifier.fillMaxWidth()) {
-            options.forEachIndexed { index, label ->
-                Text(
-                    text = label,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (selectedIndex == index) Color.White else LiquidTheme.TextSub,
-                    textAlign = TextAlign.Center,
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val segW = maxWidth / options.size
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(capsuleShape)
-                        .clickable { onSelect(index) }
-                        .padding(vertical = 10.dp)
+                        .width(segW)
+                        .fillMaxHeight()
+                        .graphicsLayer {
+                            translationX = segW.toPx() * indicatorFraction
+                        }
+                        .then(
+                            if (backdrop != null) Modifier.liquidGlass(
+                                backdrop = backdrop,
+                                shape = capsuleShape,
+                                scrim = Color.White.copy(alpha = 0.1f)
+                            )
+                            else Modifier.background(Color(0x1FFFFFFF), capsuleShape)
+                        )
+                        .border(1.dp, Color(0x33FFFFFF), capsuleShape)
                 )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    options.forEachIndexed { index, label ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(capsuleShape)
+                                .clickable { onSelect(index) }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (selectedIndex == index) Color.White else LiquidTheme.TextSub,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             }
         }
     }
