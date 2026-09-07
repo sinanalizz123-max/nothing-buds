@@ -21,6 +21,8 @@ class NothingBudsApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.nothingbuds.util.AppLog.init(filesDir)
+        com.nothingbuds.util.AppLog.installCrashHandler()
         createNotificationChannels()
     }
 

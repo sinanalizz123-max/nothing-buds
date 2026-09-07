@@ -518,3 +518,28 @@ Verification:
   capped at 0.5; experimental disclaimers in UI, never medical claims.
 
 Confidence: 100% (build-verified, tests green).
+
+Task 15 — File-backed central logging with crash capture (logging infra fix)
+STATUS: DONE
+Root cause of missing logs: export shelled `logcat -d` through a hardcoded tag
+allowlist, so any untagged line (notably crash headers/stacktraces) was dropped,
+and logcat rotation could lose entries. The export had no source of its own.
+Changes (logging only; no feature/protocol/UI/state behavior changed):
+- New util/AppLog.kt: single app-scoped sink; every entry mirrored to logcat AND
+  appended to logs/applog.txt (256KB rotation, one backup generation); chronological
+  synchronous writes under one lock; installCrashHandler() records FATAL EXCEPTION
+  + full stacktrace to the file, then chains to the previous handler; all file I/O
+  hardened so logging can never throw (a stale-dir test-ordering failure proved this).
+- NothingBudsApp.onCreate(): AppLog.init(filesDir) + installCrashHandler().
+- Migrated all 144 Log.d/w/e call sites (8 files) to AppLog; messages identical.
+- SettingsScreen exportLogs(): reads AppLog.snapshot() (live file incl. prior-run
+  crashes) instead of the logcat shell + tag filter; header/share flow unchanged.
+- New AppLogTests (7): multi-layer capture, ordering, fresh-entry presence,
+  rotation, thread safety, levels, crash capture + delegate.
+
+Verification:
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug` -> BUILD SUCCESSFUL.
+- Unit test report: 58 tests, 0 failures, 0 errors.
+- Built APK copied to debug/app-debug.apk.
+
+Confidence: 100% (build-verified, tests green).

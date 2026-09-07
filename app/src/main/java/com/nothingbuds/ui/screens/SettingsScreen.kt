@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
 import android.widget.Toast
+import com.nothingbuds.util.AppLog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -400,25 +401,10 @@ private fun SettingsItem(
 
 /** Gathers our app's logcat, header, and last known earbuds state into a shareable file. */
 private suspend fun exportLogs(context: Context) {
-    val appTags = setOf(
-        "BudsService", "MainActivity", "NothingBudsApp", "BudsCompanionService",
-        "BootReceiver", "BluetoothConnectionReceiver", "AncTileService"
-    )
-
+    // The live AppLog file: every layer, chronological, incl. fatal crashes from
+    // prior runs. No logcat shell, no tag filter, never a stale snapshot.
     val body = withContext(kotlinx.coroutines.Dispatchers.IO) {
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime"))
-            val logs = process.inputStream.bufferedReader().useLines { lines ->
-                lines.filter { line ->
-                    appTags.any { line.contains(" $it ") || line.contains(" $it:") } ||
-                        line.contains("nothingbuds")
-                }.joinToString("\n")
-            }
-            process.waitFor()
-            logs
-        } catch (e: Exception) {
-            "logcat unavailable: ${e.message}"
-        }
+        AppLog.snapshot().joinToString("\n").ifEmpty { "(log buffer empty)" }
     }
 
     val header = buildString {
