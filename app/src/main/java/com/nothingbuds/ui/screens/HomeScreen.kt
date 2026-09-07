@@ -38,7 +38,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -83,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.AncMode
 import com.nothingbuds.protocol.DiracEqPreset
+import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import kotlin.math.roundToInt
 
@@ -105,7 +105,11 @@ private val ANC_LEVELS = listOf(
 fun HomeScreen(
     state: EarbudsState,
     onNavigateToDevices: () -> Unit,
-    onNavigateToEQ: () -> Unit,
+    onSetPreset: (EqPreset) -> Unit,
+    onSetDiracEq: (Int) -> Unit,
+    onSetCustomEq: (IntArray) -> Unit,
+    onSetDiracCustomEq: (Int, Int, Int) -> Unit,
+    onApplyMyEq: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToExtras: () -> Unit,
     onSetAncMode: (AncMode) -> Unit,
@@ -175,7 +179,11 @@ fun HomeScreen(
             item {
                 SoundCard(
                     state = state,
-                    onNavigateToEQ = onNavigateToEQ,
+                    onSetPreset = onSetPreset,
+                    onSetDiracEq = onSetDiracEq,
+                    onSetCustomEq = onSetCustomEq,
+                    onSetDiracCustomEq = onSetDiracCustomEq,
+                    onApplyMyEq = onApplyMyEq,
                     onSetBassBoost = onSetBassBoost,
                     onToggleSpatialAudio = onToggleSpatialAudio,
                     onToggleLhdc = onToggleLhdc,
@@ -342,13 +350,8 @@ private fun BatteryCell(
                 )
             }
 
-            // The number sits over the fill once the cell is more than about half full, so it
-            // has to flip to the fill's own content colour to stay readable.
-            val numberColor = if (fraction > 0.45f) {
-                contentColorFor(fillColor)
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
+            // Battery percentage always in the accent colour.
+            val numberColor = LiquidTheme.Accent
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (charging) {
@@ -445,7 +448,11 @@ private fun ListeningModeCard(
 @Composable
 private fun SoundCard(
     state: EarbudsState,
-    onNavigateToEQ: () -> Unit,
+    onSetPreset: (EqPreset) -> Unit,
+    onSetDiracEq: (Int) -> Unit,
+    onSetCustomEq: (IntArray) -> Unit,
+    onSetDiracCustomEq: (Int, Int, Int) -> Unit,
+    onApplyMyEq: () -> Unit,
     onSetBassBoost: (Boolean, Int) -> Unit,
     onToggleSpatialAudio: (Boolean) -> Unit,
     onToggleLhdc: (Boolean) -> Unit,
@@ -453,6 +460,7 @@ private fun SoundCard(
 ) {
     val rebootGate = remember { RebootGate() }
     var showRebootDialog by remember { mutableStateOf(false) }
+    var showEqPopup by remember { mutableStateOf(false) }
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
@@ -463,7 +471,7 @@ private fun SoundCard(
                 myEqShown = state.myEqActive && state.calibrationEnabled && state.myEq != null
             ),
             icon = Icons.Default.Equalizer,
-            onClick = onNavigateToEQ,
+            onClick = { if (state.isConnected) showEqPopup = true },
         ) {
             Text(
                 eqRowSubtitle(
@@ -578,6 +586,18 @@ private fun SoundCard(
                 },
                 title = { Text("Reboot required") },
                 text = { Text("Changing the codec makes the earbuds reboot; they drop offline briefly while restarting.") }
+            )
+        }
+
+        if (showEqPopup) {
+            EqPopupOverlay(
+                state = state,
+                onSetPreset = onSetPreset,
+                onSetDiracEq = onSetDiracEq,
+                onSetCustomEq = onSetCustomEq,
+                onSetDiracCustomEq = onSetDiracCustomEq,
+                onApplyMyEq = onApplyMyEq,
+                onDismiss = { showEqPopup = false }
             )
         }
     }

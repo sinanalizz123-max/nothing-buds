@@ -31,7 +31,6 @@ import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.service.BudsService
 import com.nothingbuds.ui.screens.CalibrationScreen
 import com.nothingbuds.ui.screens.DeviceListScreen
-import com.nothingbuds.ui.screens.EQScreen
 import com.nothingbuds.ui.screens.ExtrasScreen
 import com.nothingbuds.ui.screens.GestureScreen
 import com.nothingbuds.ui.screens.HomeScreen
@@ -134,11 +133,11 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 state = state,
                                 onNavigateToDevices = { navController.navigate("devices") },
-                                onNavigateToEQ = {
-                                    if (state.isConnected) {
-                                        navController.navigate("eq")
-                                    }
-                                },
+                                onSetPreset = { preset -> budsService?.setEqPreset(preset) },
+                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
+                                onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
+                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
+                                onApplyMyEq = { budsService?.applyMyEq() },
                                 onNavigateToSettings = { navController.navigate("settings") },
                                 onNavigateToExtras = { navController.navigate("extras") },
                                 onSetAncMode = { mode -> budsService?.setAncMode(mode) },
@@ -182,18 +181,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable("eq") {
-                            EQScreen(
-                                state = state,
-                                onSetPreset = { preset -> budsService?.setEqPreset(preset) },
-                                onSetDiracEq = { level -> budsService?.setDiracEq(level) },
-                                onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
-                                onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
-                                onApplyMyEq = { budsService?.applyMyEq() },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-
                         composable("calibration") {
                             CalibrationScreen(
                                 state = state,
@@ -220,7 +207,6 @@ class MainActivity : ComponentActivity() {
                                 onSetAutoPowerOff = { minutes -> budsService?.setAutoPowerOff(minutes) },
                                 onSetCaseLedColor = { color -> budsService?.setCaseLedColor(color) },
                                 onStartFitTest = { budsService?.startFitTest() },
-                                onNavigateToEq = { navController.navigate("eq") },
                                 onToggleCalibration = { enabled -> budsService?.setPersonalSoundCalibration(enabled) },
                                 onNavigateToCalibration = { navController.navigate("calibration") },
                             )

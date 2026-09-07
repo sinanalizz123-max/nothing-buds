@@ -1,16 +1,22 @@
 package com.nothingbuds.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,16 +47,96 @@ internal fun eqRowSubtitle(
     else -> eqPresetName
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EQScreen(
+fun EqPopupOverlay(
     state: EarbudsState,
     onSetPreset: (EqPreset) -> Unit,
     onSetDiracEq: (Int) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
     onSetDiracCustomEq: (Int, Int, Int) -> Unit,
     onApplyMyEq: () -> Unit,
-    onBack: () -> Unit
+    onDismiss: () -> Unit
+) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val scale by animateFloatAsState(
+        targetValue = if (shown) 1f else 0.92f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+        label = "popupScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (shown) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "popupAlpha"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.35f * alpha))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        val backdrop = LocalAppBackdrop.current
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.9f)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+                .then(
+                    if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
+                    else Modifier.glassCard()
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg
+            ),
+            shape = LiquidTheme.CardShape,
+            border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Equalizer",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                EqSelectorContent(
+                    state = state,
+                    onSetPreset = onSetPreset,
+                    onSetDiracEq = onSetDiracEq,
+                    onSetCustomEq = onSetCustomEq,
+                    onSetDiracCustomEq = onSetDiracCustomEq,
+                    onApplyMyEq = onApplyMyEq
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EqSelectorContent(
+    state: EarbudsState,
+    onSetPreset: (EqPreset) -> Unit,
+    onSetDiracEq: (Int) -> Unit,
+    onSetCustomEq: (IntArray) -> Unit,
+    onSetDiracCustomEq: (Int, Int, Int) -> Unit,
+    onApplyMyEq: () -> Unit
 ) {
     var customBands by remember { mutableStateOf(state.customEq.copyOf()) }
     var diracBands by remember { mutableStateOf(state.diracCustomEq.copyOf()) }
@@ -58,34 +144,7 @@ fun EQScreen(
     var showDiracUnavailable by remember { mutableStateOf(false) }
     val myEqShown = showMyEqTile(isDirac, state.calibrationEnabled, state.myEq)
 
-    GlassScreenRoot {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Equalizer") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        containerColor = Color.Transparent
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 "Pick a preset; the earbuds apply the curve instantly.",
                 style = MaterialTheme.typography.bodySmall,
@@ -293,9 +352,6 @@ fun EQScreen(
                 }
             }
         }
-        }
-    }
-    }
 
     if (showDiracUnavailable) {
         AlertDialog(

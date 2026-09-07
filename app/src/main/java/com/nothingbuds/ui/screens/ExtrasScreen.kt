@@ -81,7 +81,6 @@ fun ExtrasScreen(
     onSetAutoPowerOff: (Int) -> Unit,
     onSetCaseLedColor: (Int) -> Unit,
     onStartFitTest: () -> Unit,
-    onNavigateToEq: () -> Unit,
     onToggleCalibration: (Boolean) -> Unit,
     onNavigateToCalibration: () -> Unit,
 ) {
