@@ -126,6 +126,9 @@ fun HomeScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
         rememberTopAppBarState()
     )
+    // Popup state lives here (never inside a LazyColumn item): a fillMaxSize overlay
+    // composed in an infinite-constraints item scope crashes measurement.
+    var showEqPopup by remember { mutableStateOf(false) }
 
     GlassScreenRoot {
     Scaffold(
@@ -179,6 +182,7 @@ fun HomeScreen(
             item {
                 SoundCard(
                     state = state,
+                    onShowEqPopup = { showEqPopup = true },
                     onSetPreset = onSetPreset,
                     onSetDiracEq = onSetDiracEq,
                     onSetCustomEq = onSetCustomEq,
@@ -211,6 +215,17 @@ fun HomeScreen(
             item {
                 DeviceFooter(state = state, onDisconnect = onDisconnect)
             }
+        }
+        if (showEqPopup) {
+            EqPopupOverlay(
+                state = state,
+                onSetPreset = onSetPreset,
+                onSetDiracEq = onSetDiracEq,
+                onSetCustomEq = onSetCustomEq,
+                onSetDiracCustomEq = onSetDiracCustomEq,
+                onApplyMyEq = onApplyMyEq,
+                onDismiss = { showEqPopup = false }
+            )
         }
         }
     }
@@ -448,6 +463,7 @@ private fun ListeningModeCard(
 @Composable
 private fun SoundCard(
     state: EarbudsState,
+    onShowEqPopup: () -> Unit,
     onSetPreset: (EqPreset) -> Unit,
     onSetDiracEq: (Int) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
@@ -460,7 +476,6 @@ private fun SoundCard(
 ) {
     val rebootGate = remember { RebootGate() }
     var showRebootDialog by remember { mutableStateOf(false) }
-    var showEqPopup by remember { mutableStateOf(false) }
     SectionCard(title = "Sound", icon = Icons.Default.GraphicEq) {
         SettingRow(
             title = "Equalizer",
@@ -471,7 +486,7 @@ private fun SoundCard(
                 myEqShown = state.myEqActive && state.calibrationEnabled && state.myEq != null
             ),
             icon = Icons.Default.Equalizer,
-            onClick = { if (state.isConnected) showEqPopup = true },
+            onClick = { if (state.isConnected) onShowEqPopup() },
         ) {
             Text(
                 eqRowSubtitle(
@@ -589,17 +604,6 @@ private fun SoundCard(
             )
         }
 
-        if (showEqPopup) {
-            EqPopupOverlay(
-                state = state,
-                onSetPreset = onSetPreset,
-                onSetDiracEq = onSetDiracEq,
-                onSetCustomEq = onSetCustomEq,
-                onSetDiracCustomEq = onSetDiracCustomEq,
-                onApplyMyEq = onApplyMyEq,
-                onDismiss = { showEqPopup = false }
-            )
-        }
     }
 }
 
