@@ -51,7 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.ui.graphics.Color
 import com.nothingbuds.ui.components.LiquidToggle
-import com.nothingbuds.ui.components.SpringSegmentedControl
+import com.nothingbuds.ui.components.LiquidGlassTabBar
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.nothingbuds.ui.theme.GlassScreenRoot
 import com.nothingbuds.ui.theme.LiquidTheme
@@ -408,7 +408,7 @@ private fun ListeningModeCard(
     }
 
         SectionCard(title = "Listening mode", icon = Icons.Default.Hearing) {
-        SpringSegmentedControl(
+        LiquidGlassTabBar(
             options = modes.map { it.label },
             selectedIndex = modes.indexOf(selected),
             onSelect = { index ->

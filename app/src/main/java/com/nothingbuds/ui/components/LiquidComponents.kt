@@ -136,31 +136,41 @@ fun LiquidToggle(
 }
 
 @Composable
-fun SpringSegmentedControl(
+fun LiquidGlassTabBar(
     options: List<String>,
     selectedIndex: Int,
-    onSelect: (Int) -> Unit
+    onSelect: (Int) -> Unit,
+    backdrop: LayerBackdrop? = LocalAppBackdrop.current,
+    modifier: Modifier = Modifier,
 ) {
+    val capsuleShape = androidx.compose.foundation.shape.RoundedCornerShape(percent = 50)
+    val indicatorFraction by animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = LiquidTheme.SpringSpec,
+        label = "tabIndicator"
+    )
     BoxWithConstraints(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .background(Color(0x0AFFFFFF), LiquidTheme.PillShape)
-            .border(1.dp, LiquidTheme.GlassBorder, LiquidTheme.PillShape)
-            .clip(LiquidTheme.PillShape)
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(backdrop, capsuleShape)
+                else Modifier
+                    .background(Color(0x0AFFFFFF), capsuleShape)
+                    .border(1.dp, LiquidTheme.GlassBorder, capsuleShape)
+            )
             .padding(4.dp)
     ) {
-        val innerWidth = maxWidth - 8.dp
-        val indicatorFraction by animateFloatAsState(
-            targetValue = selectedIndex.toFloat(),
-            animationSpec = LiquidTheme.SpringSpec,
-            label = "segIndicator"
-        )
+        val segW = maxWidth / options.size
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .fillMaxWidth(1f / options.size)
-                .offset(x = innerWidth * indicatorFraction / options.size)
-                .background(Color(0x1FFFFFFF), LiquidTheme.PillShape)
+                .offset(x = segW * indicatorFraction)
+                .then(
+                    if (backdrop != null) Modifier.liquidGlass(backdrop, capsuleShape)
+                    else Modifier.background(Color(0x1FFFFFFF), capsuleShape)
+                )
+                .border(1.dp, Color(0x33FFFFFF), capsuleShape)
         )
         Row(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, label ->
@@ -172,7 +182,7 @@ fun SpringSegmentedControl(
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .weight(1f)
-                        .clip(LiquidTheme.PillShape)
+                        .clip(capsuleShape)
                         .clickable { onSelect(index) }
                         .padding(vertical = 10.dp)
                 )
