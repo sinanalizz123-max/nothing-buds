@@ -15,8 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,10 +26,10 @@ import com.nothingbuds.data.EarbudsState
 import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.ui.components.EqDragSlider
-import com.nothingbuds.ui.theme.GlassScreenRoot
 import com.nothingbuds.ui.theme.LiquidTheme
 import com.nothingbuds.ui.theme.LocalAppBackdrop
 import com.nothingbuds.ui.theme.glassCard
+import com.nothingbuds.ui.theme.kyantDialogGlass
 import com.nothingbuds.ui.theme.liquidGlass
 import kotlin.math.roundToInt
 
@@ -55,7 +57,8 @@ fun EqPopupOverlay(
     onSetCustomEq: (IntArray) -> Unit,
     onSetDiracCustomEq: (Int, Int, Int) -> Unit,
     onApplyMyEq: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    backdrop: LayerBackdrop? = LocalAppBackdrop.current,
 ) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
@@ -76,7 +79,6 @@ fun EqPopupOverlay(
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center
     ) {
-        val backdrop = LocalAppBackdrop.current
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
@@ -87,13 +89,13 @@ fun EqPopupOverlay(
                     this.alpha = alpha
                 }
                 .then(
-                    if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
+                    if (backdrop != null) Modifier.kyantDialogGlass(backdrop)
                     else Modifier.glassCard()
                 ),
             colors = CardDefaults.cardColors(
                 containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg
             ),
-            shape = LiquidTheme.CardShape,
+            shape = RoundedCornerShape(28.dp),
             border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
         ) {
             Column(

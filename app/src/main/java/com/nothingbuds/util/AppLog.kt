@@ -28,6 +28,17 @@ object AppLog {
     @Volatile
     var minLevel: Level = Level.VERBOSE
 
+    /**
+     * Master switch for file capture, driven by the Settings "Log catching"
+     * toggle (off by default). Logcat mirroring always stays on; only the
+     * persistent file (and crash-file writes) are gated.
+     */
+    @Volatile
+    var enabled: Boolean = false
+
+    const val PREF_ENABLED = "log_catching"
+    const val PREF_UNLOCKED = "log_catching_unlocked"
+
     fun init(filesDir: File) {
         synchronized(lock) {
             logDir = File(filesDir, "logs").apply { mkdirs() }
@@ -45,7 +56,7 @@ object AppLog {
 
     private fun add(level: Level, tag: String, message: String): Int {
         android.util.Log.println(levelToPriority(level), tag, message)
-        if (level < minLevel) return 0
+        if (level < minLevel || !enabled) return 0
         synchronized(lock) {
             seq += 1
             val line = "$seq ${formatTime(System.currentTimeMillis())} " +
@@ -101,9 +112,14 @@ object AppLog {
     fun installCrashHandler(delegate: ((Thread, Throwable) -> Unit)? = null) {
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            // Crash-file capture obeys the same opt-in toggle as normal logging.
+            val wasEnabled = enabled
+            if (!wasEnabled) enabled = true
             try {
                 e("AndroidRuntime", "FATAL EXCEPTION: ${thread.name}\n${error.stackTraceToString()}")
             } catch (_: Exception) {
+            } finally {
+                enabled = wasEnabled
             }
             (delegate ?: { t, e -> prev?.uncaughtException(t, e) })(thread, error)
         }

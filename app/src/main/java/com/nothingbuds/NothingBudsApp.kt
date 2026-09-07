@@ -22,6 +22,9 @@ class NothingBudsApp : Application() {
     override fun onCreate() {
         super.onCreate()
         com.nothingbuds.util.AppLog.init(filesDir)
+        com.nothingbuds.util.AppLog.enabled = getSharedPreferences(
+            "earbuds_prefs", MODE_PRIVATE
+        ).getBoolean(com.nothingbuds.util.AppLog.PREF_ENABLED, false)
         com.nothingbuds.util.AppLog.installCrashHandler()
         createNotificationChannels()
     }

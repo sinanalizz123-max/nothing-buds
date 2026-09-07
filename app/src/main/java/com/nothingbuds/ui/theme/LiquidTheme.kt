@@ -4,8 +4,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -103,6 +105,9 @@ fun AmbientBackground(modifier: Modifier = Modifier) {
  */
 val LocalAppBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 
+/** False in Material3 modes: glass effects collapse to flat Material surfaces. */
+val LocalGlassEnabled = compositionLocalOf { true }
+
 @Composable
 fun rememberAppBackdrop(): LayerBackdrop = rememberLayerBackdrop {
     drawRect(Color(0xFF050508))
@@ -117,6 +122,24 @@ fun Modifier.appBackdropSource(backdrop: LayerBackdrop): Modifier =
  * vibrancy + neutral color controls + luminance blur + lens refraction, finished
  * with a dark scrim so content stays legible.
  */
+/**
+ * Kyant dialog recipe (their DialogContent): uniform plain highlight, depth
+ * lens, translucent container. Used for floating popups.
+ */
+fun Modifier.kyantDialogGlass(backdrop: LayerBackdrop): Modifier = this.drawBackdrop(
+    backdrop = backdrop,
+    shape = { androidx.compose.foundation.shape.RoundedCornerShape(28.dp) },
+    effects = {
+        colorControls(brightness = 0f, saturation = 1.5f)
+        blur(8.dp.toPx())
+        lens(24.dp.toPx(), 48.dp.toPx(), true)
+    },
+    highlight = { com.kyant.backdrop.highlight.Highlight.Plain },
+    onDrawSurface = {
+        drawRect(Color(0xFF121212).copy(alpha = 0.4f))
+    },
+)
+
 fun Modifier.liquidGlass(
     backdrop: LayerBackdrop,
     shape: Shape,
@@ -146,6 +169,16 @@ fun Modifier.liquidGlass(
  */
 @Composable
 fun GlassScreenRoot(content: @Composable () -> Unit) {
+    if (!LocalGlassEnabled.current) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            content()
+        }
+        return
+    }
     val backdrop = rememberAppBackdrop()
     CompositionLocalProvider(LocalAppBackdrop provides backdrop) {
         Box(modifier = Modifier.fillMaxSize()) {

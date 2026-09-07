@@ -105,6 +105,7 @@ private val ANC_LEVELS = listOf(
 fun HomeScreen(
     state: EarbudsState,
     onNavigateToDevices: () -> Unit,
+    onShowEqPopup: () -> Unit,
     onSetPreset: (EqPreset) -> Unit,
     onSetDiracEq: (Int) -> Unit,
     onSetCustomEq: (IntArray) -> Unit,
@@ -126,9 +127,6 @@ fun HomeScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
         rememberTopAppBarState()
     )
-    // Popup state lives here (never inside a LazyColumn item): a fillMaxSize overlay
-    // composed in an infinite-constraints item scope crashes measurement.
-    var showEqPopup by remember { mutableStateOf(false) }
 
     GlassScreenRoot {
     Scaffold(
@@ -182,7 +180,7 @@ fun HomeScreen(
             item {
                 SoundCard(
                     state = state,
-                    onShowEqPopup = { showEqPopup = true },
+                    onShowEqPopup = onShowEqPopup,
                     onSetPreset = onSetPreset,
                     onSetDiracEq = onSetDiracEq,
                     onSetCustomEq = onSetCustomEq,
@@ -215,17 +213,6 @@ fun HomeScreen(
             item {
                 DeviceFooter(state = state, onDisconnect = onDisconnect)
             }
-        }
-        if (showEqPopup) {
-            EqPopupOverlay(
-                state = state,
-                onSetPreset = onSetPreset,
-                onSetDiracEq = onSetDiracEq,
-                onSetCustomEq = onSetCustomEq,
-                onSetDiracCustomEq = onSetDiracCustomEq,
-                onApplyMyEq = onApplyMyEq,
-                onDismiss = { showEqPopup = false }
-            )
         }
         }
     }

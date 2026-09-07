@@ -13,9 +13,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,11 +33,16 @@ import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.service.BudsService
 import com.nothingbuds.ui.screens.CalibrationScreen
 import com.nothingbuds.ui.screens.DeviceListScreen
+import com.nothingbuds.ui.screens.EqPopupOverlay
 import com.nothingbuds.ui.screens.ExtrasScreen
 import com.nothingbuds.ui.screens.GestureScreen
 import com.nothingbuds.ui.screens.HomeScreen
 import com.nothingbuds.ui.screens.SettingsScreen
+import com.nothingbuds.ui.theme.LocalGlassEnabled
 import com.nothingbuds.ui.theme.NothingEarbudsTheme
+import com.nothingbuds.ui.theme.UiTheme
+import com.nothingbuds.ui.theme.appBackdropSource
+import com.nothingbuds.ui.theme.rememberAppBackdrop
 
 class MainActivity : ComponentActivity() {
 
@@ -115,7 +122,15 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         setContent {
-            NothingEarbudsTheme {
+            var uiTheme by remember {
+                mutableStateOf(
+                    UiTheme.parse(
+                        getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+                            .getString(UiTheme.PREF_KEY, null)
+                    )
+                )
+            }
+            NothingEarbudsTheme(darkTheme = uiTheme != UiTheme.MATERIAL_LIGHT) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -124,15 +139,31 @@ class MainActivity : ComponentActivity() {
 
                     // One source of truth — the service writes into it whether we are bound or not.
                     val state by BudsRepository.state.collectAsState()
+                    var showEqPopup by remember { mutableStateOf(false) }
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = "home"
+                    CompositionLocalProvider(
+                        LocalGlassEnabled provides (uiTheme == UiTheme.LIQUID_GLASS)
                     ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val popupBackdrop = rememberAppBackdrop()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(
+                                        if (showEqPopup && uiTheme == UiTheme.LIQUID_GLASS) {
+                                            Modifier.appBackdropSource(popupBackdrop)
+                                        } else Modifier
+                                    )
+                            ) {
+                                NavHost(
+                                    navController = navController,
+                                    startDestination = "home"
+                                ) {
                         composable("home") {
                             HomeScreen(
                                 state = state,
                                 onNavigateToDevices = { navController.navigate("devices") },
+                                onShowEqPopup = { showEqPopup = true },
                                 onSetPreset = { preset -> budsService?.setEqPreset(preset) },
                                 onSetDiracEq = { level -> budsService?.setDiracEq(level) },
                                 onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
@@ -194,6 +225,12 @@ class MainActivity : ComponentActivity() {
 
                         composable("settings") {
                             SettingsScreen(
+                                uiTheme = uiTheme,
+                                onThemeChange = { selected ->
+                                    uiTheme = selected
+                                    getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+                                        .edit().putString(UiTheme.PREF_KEY, selected.name).apply()
+                                },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -223,8 +260,23 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                if (showEqPopup) {
+                    EqPopupOverlay(
+                        state = state,
+                        onSetPreset = { preset -> budsService?.setEqPreset(preset) },
+                        onSetDiracEq = { level -> budsService?.setDiracEq(level) },
+                        onSetCustomEq = { bands -> budsService?.setCustomEq(bands) },
+                        onSetDiracCustomEq = { bass, mid, treble -> budsService?.setDiracCustomEq(bass, mid, treble) },
+                        onApplyMyEq = { budsService?.applyMyEq() },
+                        onDismiss = { showEqPopup = false },
+                        backdrop = if (uiTheme == UiTheme.LIQUID_GLASS) popupBackdrop else null
+                    )
+                }
             }
         }
+    }
+    }
+    }
     }
 
     override fun onStart() {

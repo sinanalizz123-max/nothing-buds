@@ -23,6 +23,7 @@ class AppLogTests {
     fun initBuffer() {
         AppLog.init(tempFolder.root)
         AppLog.clear()
+        AppLog.enabled = true
     }
 
     @Test
@@ -79,6 +80,16 @@ class AppLogTests {
         pool.shutdown()
         val snapshot = AppLog.snapshot()
         assertEquals(snapshot.size, snapshot.map { it.substringBefore(" ") }.toSet().size)
+    }
+
+    @Test
+    fun `disabled toggle captures nothing`() {
+        AppLog.enabled = false
+        AppLog.d("Test", "must not be stored")
+        assertTrue(AppLog.snapshot().isEmpty())
+        AppLog.enabled = true
+        AppLog.d("Test", "stored now")
+        assertTrue(AppLog.snapshot().any { it.contains("stored now") })
     }
 
     @Test

@@ -37,6 +37,7 @@ import com.nothingbuds.data.BudsRepository
 import com.nothingbuds.data.CompanionPairing
 import com.nothingbuds.qs.AncTileService
 import com.nothingbuds.service.BudsService
+import com.nothingbuds.ui.theme.UiTheme
 import com.nothingbuds.ui.components.LiquidToggle
 import java.io.File
 import java.text.SimpleDateFormat
@@ -48,6 +49,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    uiTheme: UiTheme,
+    onThemeChange: (UiTheme) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -169,6 +172,27 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSection(title = "Appearance") {
+                UiTheme.entries.forEach { theme ->
+                    SettingsItem(
+                        title = theme.label,
+                        subtitle = when (theme) {
+                            UiTheme.MATERIAL_DARK -> "Standard dark interface"
+                            UiTheme.MATERIAL_LIGHT -> "Standard light interface"
+                            UiTheme.LIQUID_GLASS -> "Glass effects and ambient glow"
+                        },
+                        icon = Icons.Default.Palette,
+                        trailing = {
+                            RadioButton(
+                                selected = uiTheme == theme,
+                                onClick = { onThemeChange(theme) }
+                            )
+                        },
+                        onClick = { onThemeChange(theme) }
+                    )
+                }
+            }
+
             // Quick access
             SettingsSection(title = "Quick access") {
                 SettingsItem(
@@ -237,12 +261,19 @@ fun SettingsScreen(
             // About section
             var versionTaps by rememberSaveable { mutableStateOf(0) }
             var lastVersionTap by remember { mutableStateOf(0L) }
+            var logUnlocked by remember {
+                mutableStateOf(prefs.getBoolean(AppLog.PREF_UNLOCKED, false))
+            }
+            var logCatching by remember {
+                mutableStateOf(prefs.getBoolean(AppLog.PREF_ENABLED, false))
+            }
             val scope = rememberCoroutineScope()
 
             SettingsSection(title = "About") {
                 SettingsItem(
                     title = "Version",
-                    subtitle = "1.0.0 (tap 7× to export logs)",
+                    subtitle = if (logUnlocked) "1.0.0 (log catching unlocked)"
+                    else "1.0.0 (tap 7× for log catching)",
                     icon = Icons.Default.Info,
                     onClick = {
                         val now = SystemClock.elapsedRealtime()
@@ -250,10 +281,8 @@ fun SettingsScreen(
                         lastVersionTap = now
                         if (versionTaps >= 7) {
                             versionTaps = 0
-                            scope.launch {
-                                Toast.makeText(context, "Exporting logs…", Toast.LENGTH_SHORT).show()
-                                exportLogs(context)
-                            }
+                            logUnlocked = true
+                            prefs.edit().putBoolean(AppLog.PREF_UNLOCKED, true).apply()
                         }
                     }
                 )
@@ -269,6 +298,34 @@ fun SettingsScreen(
                     subtitle = "Based on ear-web reverse engineering",
                     icon = Icons.Default.Memory
                 )
+            }
+
+            if (logUnlocked) {
+                SettingsSection(title = "Diagnostics") {
+                    SettingsSwitch(
+                        title = "Log catching",
+                        subtitle = if (logCatching) "Capturing runtime logs to file"
+                        else "Runtime log capture is off",
+                        icon = Icons.Default.BugReport,
+                        checked = logCatching,
+                        onCheckedChange = { enabled ->
+                            logCatching = enabled
+                            prefs.edit().putBoolean(AppLog.PREF_ENABLED, enabled).apply()
+                            AppLog.enabled = enabled
+                        }
+                    )
+                    if (logCatching) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = {
+                            scope.launch {
+                                Toast.makeText(context, "Exporting logs…", Toast.LENGTH_SHORT).show()
+                                exportLogs(context)
+                            }
+                        }) {
+                            Text("Download logs")
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -367,7 +424,8 @@ private fun SettingsItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    trailing: @Composable () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -396,6 +454,7 @@ private fun SettingsItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        trailing()
     }
 }
 
