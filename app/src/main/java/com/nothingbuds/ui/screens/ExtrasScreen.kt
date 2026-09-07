@@ -400,13 +400,14 @@ private fun SectionCard(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .then(
                 if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
-                else Modifier.glassCard()
+                else Modifier
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
         ),
         shape = LiquidTheme.CardShape,
-        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+        border = if (LocalAppBackdrop.current != null)
+                BorderStroke(1.dp, LiquidTheme.GlassBorder) else null,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

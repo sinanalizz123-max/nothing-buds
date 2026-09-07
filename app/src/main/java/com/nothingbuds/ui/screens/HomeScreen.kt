@@ -232,13 +232,14 @@ private fun BatteryCard(
             .fillMaxWidth()
             .then(
                 if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
-                else Modifier.glassCard()
+                else Modifier
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
         ),
         shape = LiquidTheme.CardShape,
-        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+        border = if (LocalAppBackdrop.current != null)
+                BorderStroke(1.dp, LiquidTheme.GlassBorder) else null,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             SectionLabel("Battery", Icons.Default.BatteryFull)
@@ -575,7 +576,8 @@ private fun SoundCard(
         if (showRebootDialog) {
             AlertDialog(
                 onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
-                containerColor = LiquidTheme.DialogBg,
+                containerColor = if (LocalAppBackdrop.current != null) LiquidTheme.DialogBg
+            else MaterialTheme.colorScheme.surfaceContainer,
                 confirmButton = {
                     TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
                         Text("Reboot now")
@@ -655,7 +657,8 @@ private fun BehaviourCard(
         if (showRebootDialog) {
             AlertDialog(
                 onDismissRequest = { rebootGate.cancel(); showRebootDialog = false },
-                containerColor = LiquidTheme.DialogBg,
+                containerColor = if (LocalAppBackdrop.current != null) LiquidTheme.DialogBg
+            else MaterialTheme.colorScheme.surfaceContainer,
                 confirmButton = {
                     TextButton(onClick = { rebootGate.confirm(); showRebootDialog = false }) {
                         Text("Reboot now")
@@ -811,13 +814,14 @@ private fun SectionCard(
             .fillMaxWidth()
             .then(
                 if (backdrop != null) Modifier.liquidGlass(backdrop, LiquidTheme.CardShape)
-                else Modifier.glassCard()
+                else Modifier
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg,
+            containerColor = if (backdrop != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
         ),
         shape = LiquidTheme.CardShape,
-        border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+        border = if (LocalAppBackdrop.current != null)
+                BorderStroke(1.dp, LiquidTheme.GlassBorder) else null,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             SectionLabel(title, icon)

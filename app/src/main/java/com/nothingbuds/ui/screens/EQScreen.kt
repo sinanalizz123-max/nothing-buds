@@ -81,8 +81,8 @@ fun EqPopupOverlay(
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .fillMaxHeight(0.9f)
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.8f)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
@@ -90,19 +90,20 @@ fun EqPopupOverlay(
                 }
                 .then(
                     if (backdrop != null) Modifier.kyantDialogGlass(backdrop)
-                    else Modifier.glassCard()
+                    else Modifier
                 ),
             colors = CardDefaults.cardColors(
-                containerColor = if (backdrop != null) Color.Transparent else LiquidTheme.GlassBg
+                containerColor = if (backdrop != null) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
             ),
             shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+            border = if (LocalAppBackdrop.current != null)
+                BorderStroke(1.dp, LiquidTheme.GlassBorder) else null,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp)
+                    .padding(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -110,7 +111,7 @@ fun EqPopupOverlay(
                 ) {
                     Text(
                         "Equalizer",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = onDismiss) {
@@ -223,9 +224,10 @@ private fun EqSelectorContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Custom EQ
+            // Custom EQ editor shows only while the Custom preset is selected.
             if (state.deviceModel?.hasCustomEq == true &&
-                (!isDirac || DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM)
+                ((isDirac && DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM) ||
+                    (!isDirac && state.eqPreset == EqPreset.CUSTOM))
             ) {
                 Text(
                     "Custom EQ",
@@ -238,13 +240,14 @@ private fun EqSelectorContent(
                         .fillMaxWidth()
                         .then(
                             LocalAppBackdrop.current?.let { Modifier.liquidGlass(it, LiquidTheme.CardShape) }
-                                ?: Modifier.glassCard()
+                                ?: Modifier
                         ),
                     colors = CardDefaults.cardColors(
                         containerColor = if (LocalAppBackdrop.current != null) Color.Transparent
-                        else LiquidTheme.GlassBg
+                        else MaterialTheme.colorScheme.surfaceContainer
                     ),
-                    border = BorderStroke(1.dp, LiquidTheme.GlassBorder),
+                    border = if (LocalAppBackdrop.current != null)
+                BorderStroke(1.dp, LiquidTheme.GlassBorder) else null,
                 ) {
                     Column(
                         modifier = Modifier
@@ -256,6 +259,24 @@ private fun EqSelectorContent(
                             // written through SET_CUSTOM_EQ (0xF041).
                             val diracLabels = listOf("Bass", "Mid", "Treble")
 
+                            if (LocalAppBackdrop.current == null) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    diracLabels.forEachIndexed { index, label ->
+                                        EqBandRow(
+                                            label = label,
+                                            value = diracBands[index],
+                                            onValueChange = { newValue ->
+                                                diracBands = diracBands.copyOf().also {
+                                                    it[index] = newValue
+                                                }
+                                            },
+                                            onValueChangeFinished = {
+                                                onSetDiracCustomEq(diracBands[0], diracBands[1], diracBands[2])
+                                            }
+                                        )
+                                    }
+                                }
+                            } else
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -304,6 +325,24 @@ private fun EqSelectorContent(
                         // Frequency labels
                         val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
 
+                        if (LocalAppBackdrop.current == null) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                frequencies.forEachIndexed { index, freq ->
+                                    EqBandRow(
+                                        label = freq,
+                                        value = customBands[index],
+                                        onValueChange = { newValue ->
+                                            customBands = customBands.copyOf().also {
+                                                it[index] = newValue
+                                            }
+                                        },
+                                        onValueChangeFinished = {
+                                            onSetCustomEq(customBands)
+                                        }
+                                    )
+                                }
+                            }
+                        } else
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -358,12 +397,46 @@ private fun EqSelectorContent(
     if (showDiracUnavailable) {
         AlertDialog(
             onDismissRequest = { showDiracUnavailable = false },
-            containerColor = LiquidTheme.DialogBg,
+            containerColor = if (LocalAppBackdrop.current != null) LiquidTheme.DialogBg
+            else MaterialTheme.colorScheme.surfaceContainer,
             confirmButton = {
                 TextButton(onClick = { showDiracUnavailable = false }) { Text("OK") }
             },
             title = { Text("Dirac unavailable") },
             text = { Text("Dirac is unavailable while the LDAC/LHDC codec is on. Turn the codec off to use Dirac; the other presets are unaffected.") }
+        )
+    }
+}
+
+@Composable
+private fun EqBandRow(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    onValueChangeFinished: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.width(56.dp)
+        )
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            onValueChangeFinished = onValueChangeFinished,
+            valueRange = -6f..6f,
+            steps = 11,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            "${if (value > 0) "+" else ""}$value",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.width(40.dp),
+            textAlign = TextAlign.End
         )
     }
 }
@@ -416,17 +489,17 @@ private fun EqPresetTile(
             .padding(vertical = 0.dp)
             .then(
                 LocalAppBackdrop.current?.let { Modifier.liquidGlass(it, LiquidTheme.CardShape) }
-                    ?: Modifier.glassCard()
+                    ?: Modifier
             ),
         colors = CardDefaults.cardColors(
             containerColor = if (LocalAppBackdrop.current != null) Color.Transparent
-            else if (isSelected) LiquidTheme.AccentGlow
-            else LiquidTheme.GlassBg
+            else if (isSelected) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surfaceContainer
         ),
-        border = BorderStroke(
+        border = if (LocalAppBackdrop.current != null) BorderStroke(
             1.dp,
             if (isSelected) LiquidTheme.Accent else LiquidTheme.GlassBorder
-        ),
+        ) else null,
         onClick = onClick
     ) {
         Column(
@@ -438,7 +511,10 @@ private fun EqPresetTile(
             Text(
                 label,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (isSelected) LiquidTheme.Accent else MaterialTheme.colorScheme.onSurface,
+                color = if (isSelected) {
+                    if (LocalAppBackdrop.current != null) LiquidTheme.Accent
+                    else MaterialTheme.colorScheme.onPrimaryContainer
+                } else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.nothingbuds.ui.theme.LiquidTheme
 import com.nothingbuds.ui.theme.LocalAppBackdrop
+import com.nothingbuds.ui.theme.LocalGlassEnabled
 import com.nothingbuds.ui.theme.liquidGlass
 import kotlin.math.roundToInt
 
@@ -56,6 +60,13 @@ fun LiquidToggle(
     onCheckedChange: (Boolean) -> Unit,
     backdrop: LayerBackdrop? = LocalAppBackdrop.current,
 ) {
+    if (!LocalGlassEnabled.current) {
+        androidx.compose.material3.Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        return
+    }
     val thumbX by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
         animationSpec = LiquidTheme.SpringSpec,
@@ -144,6 +155,25 @@ fun LiquidGlassTabBar(
     modifier: Modifier = Modifier,
 ) {
     val capsuleShape = androidx.compose.foundation.shape.RoundedCornerShape(percent = 50)
+    if (!LocalGlassEnabled.current) {
+        SingleChoiceSegmentedButtonRow(
+            modifier = modifier.fillMaxWidth()
+        ) {
+            options.forEachIndexed { index, label ->
+                SegmentedButton(
+                    selected = selectedIndex == index,
+                    onClick = { onSelect(index) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index, options.size
+                    ),
+                    icon = {},
+                ) {
+                    Text(label)
+                }
+            }
+        }
+        return
+    }
     val indicatorFraction by animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
         animationSpec = LiquidTheme.SpringSpec,
