@@ -166,6 +166,10 @@ fun LiquidGlassTabBar(
                     shape = SegmentedButtonDefaults.itemShape(
                         index, options.size
                     ),
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primary,
+                        activeContentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     icon = {},
                 ) {
                     Text(label)
