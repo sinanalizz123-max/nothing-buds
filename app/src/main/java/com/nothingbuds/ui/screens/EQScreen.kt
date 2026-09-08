@@ -72,7 +72,7 @@ fun EqPopupOverlay(
         animationSpec = tween(durationMillis = 300),
         label = "popupAlpha"
     )
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.35f * alpha))
@@ -82,7 +82,8 @@ fun EqPopupOverlay(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.8f)
+                .wrapContentHeight()
+                .heightIn(max = maxHeight * 0.8f)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
@@ -146,6 +147,9 @@ private fun EqSelectorContent(
     val isDirac = state.deviceModel?.hasDiracEq == true
     var showDiracUnavailable by remember { mutableStateOf(false) }
     val myEqShown = showMyEqTile(isDirac, state.calibrationEnabled, state.myEq)
+    val showCustomEditor = state.deviceModel?.hasCustomEq == true &&
+        ((isDirac && DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM) ||
+            (!isDirac && state.eqPreset == EqPreset.CUSTOM))
 
     Column(modifier = Modifier.fillMaxWidth()) {
             Text(
@@ -222,13 +226,9 @@ private fun EqSelectorContent(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             // Custom EQ editor shows only while the Custom preset is selected.
-            if (state.deviceModel?.hasCustomEq == true &&
-                ((isDirac && DiracEqPreset.fromLevel(state.diracEq) == DiracEqPreset.CUSTOM) ||
-                    (!isDirac && state.eqPreset == EqPreset.CUSTOM))
-            ) {
+            if (showCustomEditor) {
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     "Custom EQ",
                     style = MaterialTheme.typography.titleMedium,
