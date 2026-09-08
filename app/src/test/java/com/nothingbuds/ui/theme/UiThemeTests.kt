@@ -14,10 +14,16 @@ class UiThemeTests {
     }
 
     @Test
-    fun `unknown defaults to liquid glass`() {
-        assertEquals(UiTheme.LIQUID_GLASS, UiTheme.parse(null))
-        assertEquals(UiTheme.LIQUID_GLASS, UiTheme.parse(""))
-        assertEquals(UiTheme.LIQUID_GLASS, UiTheme.parse("DARK"))
+    fun `unknown falls back to material dark`() {
+        assertEquals(UiTheme.MATERIAL_DARK, UiTheme.parse(null))
+        assertEquals(UiTheme.MATERIAL_DARK, UiTheme.parse(""))
+        assertEquals(UiTheme.MATERIAL_DARK, UiTheme.parse("DARK"))
+    }
+
+    @Test
+    fun `first launch follows system theme with material`() {
+        assertEquals(UiTheme.MATERIAL_DARK, UiTheme.systemDefault(isSystemDark = true))
+        assertEquals(UiTheme.MATERIAL_LIGHT, UiTheme.systemDefault(isSystemDark = false))
     }
 
     @Test

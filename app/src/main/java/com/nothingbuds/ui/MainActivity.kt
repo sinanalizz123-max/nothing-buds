@@ -122,12 +122,13 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         setContent {
+            val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             var uiTheme by remember {
+                val stored = getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
+                    .getString(UiTheme.PREF_KEY, null)
                 mutableStateOf(
-                    UiTheme.parse(
-                        getSharedPreferences("earbuds_prefs", Context.MODE_PRIVATE)
-                            .getString(UiTheme.PREF_KEY, null)
-                    )
+                    if (stored == null) UiTheme.systemDefault(systemDark)
+                    else UiTheme.parse(stored)
                 )
             }
             NothingEarbudsTheme(darkTheme = uiTheme != UiTheme.MATERIAL_LIGHT) {

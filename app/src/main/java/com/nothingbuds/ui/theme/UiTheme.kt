@@ -12,7 +12,11 @@ enum class UiTheme(val label: String) {
             try {
                 valueOf(raw ?: "")
             } catch (_: Exception) {
-                LIQUID_GLASS
+                MATERIAL_DARK
             }
+
+        /** First-launch default: Material3 following the system theme. */
+        fun systemDefault(isSystemDark: Boolean): UiTheme =
+            if (isSystemDark) MATERIAL_DARK else MATERIAL_LIGHT
     }
 }

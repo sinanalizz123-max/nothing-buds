@@ -36,22 +36,22 @@ private val FallbackDark = darkColorScheme(
 )
 
 private val FallbackLight = lightColorScheme(
-    primary = Color(0xFFB3261E),
+    primary = Color(0xFF9C4A00),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFDAD6),
-    onPrimaryContainer = Color(0xFF410004),
-    secondary = Color(0xFF775652),
+    primaryContainer = Color(0xFFFFDCBE),
+    onPrimaryContainer = Color(0xFF2F1500),
+    secondary = Color(0xFF5F5F5F),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFDAD6),
-    onSecondaryContainer = Color(0xFF2C1512),
-    tertiary = Color(0xFF6F5B40),
+    secondaryContainer = Color(0xFFE8E8E8),
+    onSecondaryContainer = Color(0xFF1B1B1B),
+    tertiary = Color(0xFF7A6A5F),
     onTertiary = Color(0xFFFFFFFF),
-    surface = Color(0xFFFFF8F7),
-    onSurface = Color(0xFF231918),
-    surfaceVariant = Color(0xFFF5DDDA),
-    onSurfaceVariant = Color(0xFF534341),
-    outline = Color(0xFF857371),
-    outlineVariant = Color(0xFFD8C2BF),
+    surface = Color(0xFFFFFDFB),
+    onSurface = Color(0xFF1F1B16),
+    surfaceVariant = Color(0xFFF0EDEA),
+    onSurfaceVariant = Color(0xFF4D4540),
+    outline = Color(0xFF8A7F78),
+    outlineVariant = Color(0xFFE0D8D2),
 )
 
 /**
@@ -62,7 +62,7 @@ private val FallbackLight = lightColorScheme(
 @Composable
 fun NothingEarbudsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
