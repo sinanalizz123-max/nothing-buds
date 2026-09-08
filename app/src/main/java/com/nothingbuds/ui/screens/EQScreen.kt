@@ -102,7 +102,8 @@ fun EqPopupOverlay(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .wrapContentHeight()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
