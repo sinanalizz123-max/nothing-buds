@@ -6,78 +6,69 @@
 
 A native Android companion app for Nothing and CMF earbuds, built with Kotlin and Jetpack Compose.
 
-> **Project status:** Experimental / reverse-engineering project. Protocol behavior is model-dependent and some features still require validation against additional earbuds.
+> **Status:** Independent community project. Earbud features are model- and firmware-dependent and are based on reverse-engineering of the Nothing / CMF Bluetooth SPP protocol.
 
 ## Screenshots
 
 > Screenshots coming soon. The app ships three interface themes (Material3 Dark, Material3 Light, Liquid Glass) selectable under Settings → Appearance.
 
-## What it does
+## Features
 
-Nothing Buds communicates with supported earbuds over Bluetooth and exposes controls that are normally handled by the official companion app.
+### Connection
+- Bluetooth discovery and connection handling
+- Automatic reconnect with retry/backoff
+- Android companion-device integration
+- Background connection and boot handling
 
-### Current feature areas
+### Sound
+- Noise Control: Off, Transparency, ANC levels, Adaptive where supported
+- Equalizer with model-specific preset and custom-EQ support
+- Bass enhancement
+- Spatial audio
+- Low-latency mode
+- Detail enhancement on compatible devices
+- LHDC on supported models
+- Experimental Personal Sound Calibration and generated **My EQ** profiles where supported
 
-- **Bluetooth connection & automatic reconnect**
-  - Dedicated foreground service for the earbuds connection
-  - Saved-device reconnect logic with retry/backoff
-  - Bluetooth attach/detach handling
-- **Listening controls**
-  - ANC: Off, Low, Mid, High, Adaptive
-  - Transparency mode
-  - Quick Settings ANC tile
-- **Equalizer**
-  - Balanced, Voice, More Treble, More Bass, Custom
-  - Model-specific Dirac Opteo handling where supported
-- **Audio extras**
-  - Bass boost / enhanced bass
-  - Spatial audio
-  - Low-latency mode
-  - Detail enhancement
-  - LHDC support on compatible models
-- **Earbud controls**
-  - In-ear detection
-  - Gesture configuration
-  - Ear-tip fit / seal test
-  - Multipoint / dual-device controls
-  - Auto power-off
-- **Device information**
-  - Battery state
-  - Firmware information
-  - Device/model detection
-- **Background integration**
-  - Companion-device association on Android 12+
-  - Boot handling
-  - Connection notifications
-  - Shareable diagnostic log export
+### Earbud controls
+- In-ear detection
+- Model-specific gesture configuration
+- Ear-tip fit / seal testing where supported
+- Multipoint / dual-device controls
+- Auto power-off
+- Model-dependent charging-case controls
+
+### Device information
+- Left/right battery state
+- Firmware information
+- Device and model detection
+- Quick Settings Noise Control tile
 
 ## Supported devices
 
-The implementation targets the Nothing / CMF Bluetooth SPP protocol and contains model-specific capability handling. Support is **not universal** across every Nothing or CMF product.
+Support is capability-driven rather than universal. The app contains model-specific behavior for Nothing and CMF earbuds represented in the reverse-engineering research under [`re/`](re/).
 
-The protocol layer currently includes explicit handling for features such as Dirac Opteo EQ, LHDC, bass-enhancer variants, multipoint, ANC, gestures, and model-dependent case LED controls.
-
-Because this project is based on reverse-engineering, a feature appearing in the UI does not necessarily mean every earbud model supports it.
+A feature being present in the app does **not** mean that every earbud model supports it. Unsupported capabilities should remain hidden or disabled rather than being assumed.
 
 ## Architecture
 
 ```text
-Android UI (Jetpack Compose)
+Jetpack Compose UI
         │
         ▼
-     MainActivity
+   MainActivity
         │
         ▼
-   BudsRepository ◄──── EarbudsState
+  BudsRepository ◄──── EarbudsState
         │
         ▼
-    BudsService
+     BudsService
         │
         ├── Bluetooth / A2DP discovery
         ├── SPP socket connection
-        ├── Command queue + serialized writes
+        ├── Serialized command queue
         ├── Response handling
-        └── Notifications / background events
+        └── Android notifications / background events
                 │
                 ▼
         Nothing / CMF SPP protocol
@@ -87,33 +78,21 @@ Android UI (Jetpack Compose)
         └── CRC16
 ```
 
-The code is separated into `data`, `protocol`, `service`, `qs`, and `ui` areas, keeping protocol work independent from the Compose presentation layer.
+The implementation keeps protocol handling separate from the Compose presentation layer and uses explicit model capability checks where protocol behavior differs between products.
 
 ## Project structure
 
 ```text
 app/src/main/java/com/nothingbuds/
-├── data/
-│   ├── BudsRepository.kt
-│   ├── CompanionPairing.kt
-│   └── EarbudsState.kt
-├── protocol/
-│   ├── Commands.kt
-│   ├── Crc16.kt
-│   ├── PacketBuilder.kt
-│   └── ResponseParser.kt
-├── qs/
-│   └── AncTileService.kt
-├── service/
-│   ├── BootReceiver.kt
-│   ├── BluetoothConnectionReceiver.kt
-│   ├── BudsCompanionService.kt
-│   ├── BudsService.kt
-│   └── NotificationHelper.kt
-└── ui/
-    ├── MainActivity.kt
-    ├── screens/
-    └── theme/
+├── data/          # State, repository, companion pairing
+├── protocol/      # Commands, packet building, CRC, response parsing
+├── qs/            # Quick Settings integration
+├── service/       # Bluetooth/background service and notifications
+└── ui/            # Compose screens and theme
+
+re/                # Reverse-engineering notes and protocol research
+.ai/               # Historical implementation/research notes
+.github/           # CI workflow
 ```
 
 ## Build
@@ -123,63 +102,71 @@ app/src/main/java/com/nothingbuds/
 - Android Studio or a compatible Gradle environment
 - JDK 17
 - Android SDK 37
-- Android device running Android 8.0 (API 26) or newer
+- Android 8.0 (API 26) or newer
 
-The project includes the Gradle wrapper, so a local Gradle installation is not required.
+The repository includes the Gradle wrapper.
 
-### Build a debug APK
+### Debug build
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-The APK is generated at:
+APK output:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The project also contains a `copyDebugApk` task that copies the debug APK into the repository's `debug/` directory after a successful debug build.
+A `copyDebugApk` task is also available when the project build configuration provides it.
 
-## CI
+## Continuous integration
 
-GitHub Actions builds the debug APK on pushes and pull requests targeting `master`, and the workflow can also be started manually. The workflow uses JDK 17 and uploads the generated debug APK as an artifact.
+GitHub Actions builds the debug APK for changes to the application/build configuration and can also be started manually. The workflow uses JDK 17 and uploads the resulting APK as an artifact.
 
-## Reverse-engineered protocol
+## Reverse engineering
 
-The protocol implementation is based on observed Nothing / CMF SPP traffic and behavior rather than a public vendor SDK. Commands are represented as 16-bit values and response handling is centralized in the protocol package.
+This project does not use an official Nothing SDK. The protocol implementation is based on observed device traffic, decompiled application behavior, and model-specific research.
 
-The source documents protocol assumptions directly in code, including command/response relationships and model-specific behavior. Treat these details as reverse-engineering notes rather than an official specification.
+The [`re/`](re/) directory is the primary technical research archive. Findings should be treated according to their evidence level and should not be promoted from unknown/inferred behavior to confirmed behavior without supporting evidence.
 
-## Diagnostics
+Useful research entry points include:
 
-The app includes a diagnostic log-sharing flow. The version row can be tapped seven times to export application logs and earbuds state for troubleshooting.
+- [`re/INDEX.md`](re/INDEX.md)
+- Protocol command documentation under [`re/PROTOCOL/`](re/PROTOCOL/)
+- EQ research under [`re/EQ/`](re/EQ/)
+- Model-specific research under [`re/`](re/)
 
-**Privacy note:** exported logs can contain device identifiers such as Bluetooth MAC addresses. Do not publish raw diagnostic logs publicly without reviewing and redacting them.
+## Diagnostics and privacy
 
-## Important repository notes
-
-This repository currently contains a committed `debug.keystore` and `debug.keystore.base64`. The latter is explicitly allowed by `.gitignore`, and the build configuration can recreate the keystore from that Base64 file. For a public release, these development signing artifacts should be removed from version control and replaced with a proper release-signing strategy.
-
-There is also no repository license file at the time of writing, so the code should not be redistributed under an assumed open-source license.
+Diagnostic export is intended for troubleshooting. Diagnostic data may include Bluetooth/device identifiers and other connection state. Review and redact exported logs before sharing them publicly.
 
 ## Limitations
 
-- Earbud feature support varies by model and firmware.
-- Reverse-engineered packet formats may change or be incomplete.
-- Some advanced protocol formats, including parts of Dirac custom EQ handling, are still being validated.
-- The project is not an official Nothing product or official Nothing software.
+- Capability support varies by earbud model and firmware.
+- Reverse-engineered formats may be incomplete or may differ across firmware versions.
+- Some protocol behavior remains model-specific or unconfirmed.
+- Experimental features can fail on unsupported devices.
+- This project is not a medical device and experimental audio calibration is not a medical hearing test.
 
 ## Disclaimer
 
 **Nothing Buds is an independent community project and is not affiliated with, endorsed by, or sponsored by Nothing Technology or CMF.** Nothing and CMF are trademarks of their respective owners.
 
-Use the app at your own risk. Writing unsupported values to an earbud may produce unexpected behavior.
+Use the application at your own risk. Sending unsupported values to an earbud may produce unexpected behavior.
 
 ## Contributing
 
-Bug reports, protocol observations, model compatibility results, and reproducible logs are especially useful. When reporting an issue, include the earbud model, firmware version, Android version, and a redacted diagnostic log when possible.
+Useful contributions include reproducible bug reports, model/firmware compatibility results, protocol observations, and carefully redacted diagnostic captures.
 
-## Development philosophy
+When reporting a device-specific issue, include where possible:
 
-The project favors small, explicit protocol abstractions and model capability checks over assuming that a single command format works for every Nothing / CMF device.
+- Earbud model
+- Firmware version
+- Android version
+- Reproducible steps
+- Redacted diagnostic information
+
+## License
+
+No license file is currently included in this repository. Do not redistribute this code under an assumed open-source license until a license is added by the project owner.
