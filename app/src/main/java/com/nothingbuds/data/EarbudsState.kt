@@ -396,6 +396,13 @@ object DeviceModels {
     }
 
     /**
+     * Lowercase model names, precomputed once so the substring fallback doesn't re-lowercase.
+     */
+    private val lowerNames: List<Pair<DeviceModel, String>> by lazy {
+        ALL_MODELS.map { it to it.name.lowercase() }
+    }
+
+    /**
      * Find device model by Bluetooth device name. Exact matches are a map hit; a substring pass
      * is kept as a fallback for names that include extra words (e.g. "CMF Buds 2 Plus (LE)") and
      * picks the LONGEST matching model name so "CMF Buds 2a ..." cannot match plain "CMF Buds 2".
@@ -406,8 +413,7 @@ object DeviceModels {
 
         var best: DeviceModel? = null
         var bestLen = 0
-        for (model in ALL_MODELS) {
-            val modelName = model.name.lowercase()
+        for ((model, modelName) in lowerNames) {
             if (lowerName.contains(modelName)) {
                 if (modelName.length > bestLen) {
                     best = model

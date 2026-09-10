@@ -7,21 +7,27 @@ package com.nothingbuds.protocol
  */
 object CRC16 {
 
-    fun calculate(data: ByteArray): Int {
-        var crc = 0xFFFF
-
-        for (byte in data) {
-            crc = crc xor (byte.toInt() and 0xFF)
-            for (j in 0 until 8) {
-                crc = if ((crc and 1) != 0) {
-                    (crc shr 1) xor 0xA001
-                } else {
-                    crc shr 1
-                }
+    private val TABLE: IntArray = IntArray(256) { i ->
+        var crc = i
+        repeat(8) {
+            crc = if ((crc and 1) != 0) {
+                (crc ushr 1) xor 0xA001
+            } else {
+                crc ushr 1
             }
         }
+        crc
+    }
 
-        return crc
+    fun calculate(data: ByteArray): Int = calculate(data, 0, data.size)
+
+    fun calculate(data: ByteArray, offset: Int, length: Int): Int {
+        var crc = 0xFFFF
+        val end = offset + length
+        for (i in offset until end) {
+            crc = (crc ushr 8) xor TABLE[(crc xor (data[i].toInt() and 0xFF)) and 0xFF]
+        }
+        return crc and 0xFFFF
     }
 
     fun toBytes(crc: Int): ByteArray {

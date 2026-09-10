@@ -217,8 +217,11 @@ enum class DiracEqPreset(val type: Int) {
         }
 
     companion object {
+        /** Level → preset, precomputed for O(1) lookups. Unknown levels read as Opteo. */
+        private val BY_TYPE: Map<Int, DiracEqPreset> by lazy { entries.associateBy { it.type } }
+
         /** Level → preset, for mapping a 0xC050 reading back to a row. Unknown levels read as Opteo. */
         fun fromLevel(level: Int): DiracEqPreset =
-            entries.firstOrNull { it.type == level } ?: OPTEO
+            BY_TYPE[level] ?: OPTEO
     }
 }

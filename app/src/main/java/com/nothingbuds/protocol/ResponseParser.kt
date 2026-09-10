@@ -269,8 +269,11 @@ object ResponseParser {
     }
 
     /** Firmware and serial come back as a NUL-padded ASCII string. */
-    fun parseAsciiString(payload: ByteArray): String =
-        payload.takeWhile { it != 0.toByte() }.toByteArray().toString(Charsets.US_ASCII).trim()
+    fun parseAsciiString(payload: ByteArray): String {
+        var end = 0
+        while (end < payload.size && payload[end] != 0.toByte()) end++
+        return String(payload, 0, end, Charsets.US_ASCII).trim()
+    }
 
     /**
      * Parse custom EQ bands from response payload.
@@ -382,7 +385,7 @@ object ResponseParser {
             val offset = 1 + i * 7
             val macBytes = payload.copyOfRange(offset, offset + 6)
             val flags = payload[offset + 6].toInt() and 0xFF
-            val mac = macBytes.joinToString(":") { "%02X".format(it) }
+            val mac = macBytes.toHexUpper(":")
             result.add(DualDevice(id = i, mac = mac, flags = flags))
         }
         return result

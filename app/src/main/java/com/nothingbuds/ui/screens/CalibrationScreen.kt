@@ -26,6 +26,15 @@ import com.nothingbuds.ui.theme.GlassScreenRoot
 
 private enum class CalibrationStep { INSTRUCTIONS, TESTING, RESULT }
 
+private val CALIBRATION_INSTRUCTIONS = listOf(
+    "Find a quiet place.",
+    "Wear the earbuds normally and make sure they fit properly.",
+    "Keep environmental noise as low as possible.",
+    "This is an experimental listening calibration, NOT a medical hearing test.",
+    "Results can vary depending on the earbuds, fit, volume, environment, and phone.",
+    "The feature may not work correctly on every device/earbud model."
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalibrationScreen(
@@ -126,15 +135,7 @@ fun CalibrationScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    val instructions = listOf(
-                        "Find a quiet place.",
-                        "Wear the earbuds normally and make sure they fit properly.",
-                        "Keep environmental noise as low as possible.",
-                        "This is an experimental listening calibration, NOT a medical hearing test.",
-                        "Results can vary depending on the earbuds, fit, volume, environment, and phone.",
-                        "The feature may not work correctly on every device/earbud model."
-                    )
-                    instructions.forEach { line ->
+                    CALIBRATION_INSTRUCTIONS.forEach { line ->
                         Text(
                             "•  $line",
                             style = MaterialTheme.typography.bodyMedium,

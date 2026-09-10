@@ -24,22 +24,22 @@ object PacketBuilder {
             operationId.set(0)
         }
 
-        val header = byteArrayOf(
-            0x55.toByte(),                          // Magic byte 1
-            0x60.toByte(),                          // Magic byte 2
-            0x01.toByte(),                          // Protocol version
-            (command and 0xFF).toByte(),            // Command low byte
-            ((command shr 8) and 0xFF).toByte(),    // Command high byte
-            (payload.size and 0xFF).toByte(),       // Payload length low byte
-            ((payload.size shr 8) and 0xFF).toByte(), // Payload length high byte (LE 16-bit)
-            opId.toByte()                           // Operation ID
-        )
+        val out = ByteArray(8 + payload.size + 2)
+        out[0] = 0x55.toByte()                          // Magic byte 1
+        out[1] = 0x60.toByte()                          // Magic byte 2
+        out[2] = 0x01.toByte()                          // Protocol version
+        out[3] = (command and 0xFF).toByte()            // Command low byte
+        out[4] = ((command shr 8) and 0xFF).toByte()    // Command high byte
+        out[5] = (payload.size and 0xFF).toByte()       // Payload length low byte
+        out[6] = ((payload.size shr 8) and 0xFF).toByte() // Payload length high byte (LE 16-bit)
+        out[7] = opId.toByte()                           // Operation ID
+        System.arraycopy(payload, 0, out, 8, payload.size)
 
-        val dataWithoutCrc = header + payload
-        val crc = CRC16.calculate(dataWithoutCrc)
-        val crcBytes = CRC16.toBytes(crc)
+        val crc = CRC16.calculate(out, 0, 8 + payload.size)
+        out[8 + payload.size] = (crc and 0xFF).toByte()
+        out[8 + payload.size + 1] = ((crc shr 8) and 0xFF).toByte()
 
-        return dataWithoutCrc + crcBytes
+        return out
     }
 
     /**
@@ -49,7 +49,15 @@ object PacketBuilder {
         val payload = if (hexPayload.isEmpty()) {
             byteArrayOf()
         } else {
-            hexPayload.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            val out = ByteArray((hexPayload.length + 1) / 2)
+            var i = 0
+            var j = 0
+            while (i < hexPayload.length) {
+                val end = minOf(i + 2, hexPayload.length)
+                out[j++] = hexPayload.substring(i, end).toInt(16).toByte()
+                i += 2
+            }
+            out
         }
         return build(command, payload)
     }
@@ -278,9 +286,10 @@ object PacketBuilder {
      * @param bands gain per band in dB, clamped to the range the earbuds accept
      */
     fun setCustomEq(bands: IntArray): ByteArray {
-        val payload = bands
-            .map { (it + EQ_GAIN_OFFSET).coerceIn(0, EQ_GAIN_OFFSET * 2).toByte() }
-            .toByteArray()
+        val payload = ByteArray(bands.size)
+        for (i in bands.indices) {
+            payload[i] = (bands[i] + EQ_GAIN_OFFSET).coerceIn(0, EQ_GAIN_OFFSET * 2).toByte()
+        }
         return build(Commands.SET_ADVANCED_EQ_VALUES, payload)
     }
 
@@ -295,24 +304,42 @@ object PacketBuilder {
      * @param bass/mid/treble gain per band in dB, clamped to -6..+6
      */
     fun setDiracCustomEq(bass: Int, mid: Int, treble: Int): ByteArray {
-        val gains = mapOf(
-            0 to bass.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN),
-            1 to mid.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN),
-            2 to treble.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN)
-        )
-        val totalGain = -((gains.values.maxOrNull() ?: 0).toFloat())
-        val bandBytes = DIRAC_BANDS.flatMap { (filterType, freq, q) ->
-            val gain = gains.getValue(filterType).toFloat()
-            listOf(filterType.toByte()) + floatLe(gain) + floatLe(freq) + floatLe(q)
-        }.toByteArray()
-        val payload = byteArrayOf(3, *floatLe(totalGain).toByteArray()) + bandBytes +
-            ByteArray(DIRAC_CUSTOM_PACKET_SIZE - 5 - bandBytes.size)
+        val bassG = bass.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN)
+        val midG = mid.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN)
+        val trebleG = treble.coerceIn(-DIRAC_BAND_GAIN, DIRAC_BAND_GAIN)
+        val totalGain = -(maxOf(bassG, midG, trebleG).toFloat())
+        val payload = ByteArray(DIRAC_CUSTOM_PACKET_SIZE)
+        payload[0] = 3
+        writeFloatLe(payload, 1, totalGain)
+        var offset = 5
+        offset = writeDiracBand(payload, offset, 1, midG.toFloat(), 980f, 0.66f)
+        offset = writeDiracBand(payload, offset, 2, trebleG.toFloat(), 3500f, 1.0f)
+        writeDiracBand(payload, offset, 0, bassG.toFloat(), 140f, 0.8f)
         return build(Commands.SET_CUSTOM_EQ, payload)
     }
 
-    private fun floatLe(value: Float): List<Byte> =
-        java.nio.ByteBuffer.allocate(4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
-            .putFloat(value).array().toList()
+    private fun writeFloatLe(dest: ByteArray, offset: Int, value: Float) {
+        val bits = java.lang.Float.floatToRawIntBits(value)
+        dest[offset] = (bits and 0xFF).toByte()
+        dest[offset + 1] = ((bits shr 8) and 0xFF).toByte()
+        dest[offset + 2] = ((bits shr 16) and 0xFF).toByte()
+        dest[offset + 3] = ((bits shr 24) and 0xFF).toByte()
+    }
+
+    private fun writeDiracBand(
+        dest: ByteArray,
+        offset: Int,
+        filterType: Int,
+        gain: Float,
+        freq: Float,
+        q: Float
+    ): Int {
+        dest[offset] = filterType.toByte()
+        writeFloatLe(dest, offset + 1, gain)
+        writeFloatLe(dest, offset + 5, freq)
+        writeFloatLe(dest, offset + 9, q)
+        return offset + 13
+    }
 
     const val SIDE_LEFT = 0x02
     const val SIDE_RIGHT = 0x03
@@ -340,11 +367,5 @@ object PacketBuilder {
     const val DIRAC_BAND_GAIN = 6
     /** CustomEQ on-wire size for 3 bands (5+16*3, incl. trailing-zero padding). */
     const val DIRAC_CUSTOM_PACKET_SIZE = 53
-    /** Radar-ordered bands: (filterType, frequency Hz, Q). */
-    private val DIRAC_BANDS = listOf(
-        Triple(1, 980f, 0.66f),
-        Triple(2, 3500f, 1.0f),
-        Triple(0, 140f, 0.8f)
-    )
     private const val EQ_GAIN_OFFSET = 6
 }

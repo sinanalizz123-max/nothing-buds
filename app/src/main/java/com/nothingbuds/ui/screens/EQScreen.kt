@@ -49,6 +49,12 @@ internal fun eqRowSubtitle(
     else -> eqPresetName
 }
 
+private val DIRAC_BAND_LABELS = listOf("Bass", "Mid", "Treble")
+
+private val EQ_FREQUENCY_LABELS = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
+
+private val REGULAR_EQ_PRESETS = EqPreset.entries.filter { it != EqPreset.CUSTOM }
+
 @Composable
 fun EqPopupOverlay(
     state: EarbudsState,
@@ -165,7 +171,7 @@ private fun EqSelectorContent(
                 // first preset. Every row writes through SET_DIRAC_EQ (0xF01D).
                 val selected = DiracEqPreset.fromLevel(state.diracEq)
                 EqTileGrid(
-                    tiles = diracRowOrder.filter { it != DiracEqPreset.CUSTOM }.map { preset ->
+                    tiles = diracRegularRowOrder.map { preset ->
                         EqTileData(
                             label = diracRowName(preset),
                             description = getDiracPresetDescription(preset),
@@ -206,9 +212,8 @@ private fun EqSelectorContent(
                     }
                 }
             } else {
-                val regular = EqPreset.entries.filter { it != EqPreset.CUSTOM }
                 EqTileGrid(
-                    tiles = regular.map { preset ->
+                    tiles = REGULAR_EQ_PRESETS.map { preset ->
                         EqTileData(
                             label = getPresetDisplayName(preset),
                             description = getPresetDescription(preset),
@@ -258,11 +263,10 @@ private fun EqSelectorContent(
                         if (isDirac) {
                             // Dirac Custom is exactly 3 bands (Bass/Mid/Treble, -6..+6),
                             // written through SET_CUSTOM_EQ (0xF041).
-                            val diracLabels = listOf("Bass", "Mid", "Treble")
 
                             if (LocalAppBackdrop.current == null) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    diracLabels.forEachIndexed { index, label ->
+                                    DIRAC_BAND_LABELS.forEachIndexed { index, label ->
                                         EqBandRow(
                                             label = label,
                                             value = diracBands[index],
@@ -282,7 +286,7 @@ private fun EqSelectorContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                diracLabels.forEachIndexed { index, label ->
+                                DIRAC_BAND_LABELS.forEachIndexed { index, label ->
                                     Column(
                                         modifier = Modifier.weight(1f),
                                         horizontalAlignment = Alignment.CenterHorizontally
@@ -324,11 +328,10 @@ private fun EqSelectorContent(
                             }
                         } else {
                         // Frequency labels
-                        val frequencies = listOf("60", "150", "400", "1k", "2.4k", "6k", "10k", "16k")
 
                         if (LocalAppBackdrop.current == null) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                frequencies.forEachIndexed { index, freq ->
+                                EQ_FREQUENCY_LABELS.forEachIndexed { index, freq ->
                                     EqBandRow(
                                         label = freq,
                                         value = customBands[index],
@@ -348,7 +351,7 @@ private fun EqSelectorContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            frequencies.forEachIndexed { index, freq ->
+                            EQ_FREQUENCY_LABELS.forEachIndexed { index, freq ->
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     horizontalAlignment = Alignment.CenterHorizontally
@@ -578,3 +581,5 @@ internal val diracRowOrder = listOf(
     DiracEqPreset.ENHANCE_VOCALS,
     DiracEqPreset.CUSTOM
 )
+
+internal val diracRegularRowOrder = diracRowOrder.filter { it != DiracEqPreset.CUSTOM }

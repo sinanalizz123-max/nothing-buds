@@ -101,6 +101,11 @@ private val ANC_LEVELS = listOf(
     AncMode.LOW to "Low",
 )
 
+private val FIND_SIDES = listOf(
+    PacketBuilder.SIDE_LEFT to "Left",
+    PacketBuilder.SIDE_RIGHT to "Right",
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
@@ -700,10 +705,7 @@ private fun FindCard(onFindMyEarbuds: (Int, Boolean) -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
-                PacketBuilder.SIDE_LEFT to "Left",
-                PacketBuilder.SIDE_RIGHT to "Right",
-            ).forEach { (side, label) ->
+            FIND_SIDES.forEach { (side, label) ->
                 if (ringing == side) {
                     Button(
                         onClick = {

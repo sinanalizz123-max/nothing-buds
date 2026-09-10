@@ -29,6 +29,7 @@ import com.nothingbuds.protocol.DiracEqPreset
 import com.nothingbuds.protocol.EqPreset
 import com.nothingbuds.protocol.PacketBuilder
 import com.nothingbuds.protocol.ResponseParser
+import com.nothingbuds.protocol.toHexLower
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1118,12 +1119,26 @@ class BudsService : Service() {
     /** Switch which paired device multipoint is actively using. */
     fun setConnectDevice(mac: String) {
         val bytes = try {
-            mac.split(":")
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .mapNotNull { it.toIntOrNull(16)?.toByte() }
-                .take(6)
-                .toByteArray()
+            val tmp = ByteArray(6)
+            var count = 0
+            var segStart = 0
+            for (i in 0..mac.length) {
+                if (i == mac.length || mac[i] == ':') {
+                    var s = segStart
+                    var e = i
+                    while (s < e && mac[s].isWhitespace()) s++
+                    while (e > s && mac[e - 1].isWhitespace()) e--
+                    if (e > s && count < 6) {
+                        val v = mac.substring(s, e).toIntOrNull(16)
+                        if (v != null) {
+                            tmp[count++] = v.toByte()
+                        }
+                    }
+                    segStart = i + 1
+                    if (count == 6) break
+                }
+            }
+            if (count == 6) tmp else tmp.copyOf(count)
         } catch (e: Exception) {
             ByteArray(0)
         }
@@ -1415,9 +1430,7 @@ class BudsService : Service() {
             .toList()
     }
 
-    private fun ByteArray.toHexString(): String {
-        return joinToString("") { "%02x".format(it) }
-    }
+    private fun ByteArray.toHexString(): String = toHexLower()
 }
 
 /**

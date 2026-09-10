@@ -153,6 +153,27 @@ object AppLog {
         val s = totalSeconds % 60
         val m = (totalSeconds / 60) % 60
         val h = (totalSeconds / 3600) % 24
-        return "%02d:%02d:%02d.%03d".format(h, m, s, ms)
+        val sb = StringBuilder(12)
+        appendPadded(sb, h, 2)
+        sb.append(':')
+        appendPadded(sb, m, 2)
+        sb.append(':')
+        appendPadded(sb, s, 2)
+        sb.append('.')
+        appendPadded(sb, ms, 3)
+        return sb.toString()
+    }
+
+    private fun appendPadded(sb: StringBuilder, value: Long, width: Int) {
+        if (value < 0) {
+            sb.append('-')
+            val s = (-value).toString()
+            for (i in 0 until width - 1 - s.length) sb.append('0')
+            sb.append(s)
+        } else {
+            val s = value.toString()
+            for (i in 0 until width - s.length) sb.append('0')
+            sb.append(s)
+        }
     }
 }
