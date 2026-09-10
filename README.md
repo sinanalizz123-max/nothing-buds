@@ -1,8 +1,16 @@
 # Nothing Buds
 
+[![Build debug APK](https://github.com/sinanalizz123-max/nothing-buds/actions/workflows/build.yml/badge.svg)](https://github.com/sinanalizz123-max/nothing-buds/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Platform: Android 8.0+](https://img.shields.io/badge/Platform-Android%208.0%2B-green.svg)
+
 A native Android companion app for Nothing and CMF earbuds, built with Kotlin and Jetpack Compose.
 
 > **Project status:** Experimental / reverse-engineering project. Protocol behavior is model-dependent and some features still require validation against additional earbuds.
+
+## Screenshots
+
+> Screenshots coming soon. The app ships three interface themes (Material3 Dark, Material3 Light, Liquid Glass) selectable under Settings → Appearance.
 
 ## What it does
 

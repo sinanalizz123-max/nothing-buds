@@ -10,8 +10,10 @@ separately from `app/` and is never packaged or compiled into any APK.
 
 - `dirac-src/` — Dirac Opteo EQ sources (`com.nothing.{espeon,girafarig,donphan,...}/equalizer`,
   `com.nothing.core.ext.TWSDeviceExtKt`, `com.nothing.device.IOTProductDevice`, …). This is what
-  tells us the EQ runs as one *preset row* (Dirac Opteo = level 0 of the 0xC050/0xF01D packet),
-  with the other rows (Pop/Rock/Classical/Electronic/Enhance Vocals/Custom) unaffected by LDAC.
+  tells us every EQ row on Dirac-capable models writes through one command
+  (0xF01D, level = row type; Dirac Opteo = level 0, Custom recall = 6), read back
+  via 0xC050 — with only the Dirac Opteo row gated on the LDAC/HDAC codec state.
+  See `DIRAC/DIRAC_EQ.md` and `EQ/EQ_UI_ROWS.md` for the per-model tables.
 - `ldac-src/` — LDAC/HDAC related sources, including the `getHDACStatus` gate that the official
   app applies only to the Dirac Opteo row.
 - `case-src/` — charging-case BLE transport (`com.nothing.caseble.*`). Findings:
