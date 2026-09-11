@@ -70,10 +70,12 @@ android {
     }
     release {
       signingConfig = signingConfigs.getByName("releaseConfig")
-      // Kept off for the first signed release: R8 full-mode needs-keeps tuning
-      // against the Kyant RuntimeShader/reflection paths; enable only with testing.
-      isMinifyEnabled = false
-      isShrinkResources = false
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro"
+      )
     }
   }
 
