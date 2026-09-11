@@ -49,11 +49,31 @@ android {
       keyAlias = "androiddebugkey"
       keyPassword = "android"
     }
+
+    create("releaseConfig") {
+      // Release keystore lives outside the repo. Passwords come only from the
+      // environment (never committed): RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS,
+      // RELEASE_KEY_PASSWORD. Keystore path defaults to the local release key,
+      // overridable via RELEASE_KEYSTORE_FILE.
+      val releaseKeystore = System.getenv("RELEASE_KEYSTORE_FILE")
+        ?: "/storage/emulated/0/opencode/keystore/release-key.jks"
+      storeFile = file(releaseKeystore)
+      storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+      keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+      keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+    }
   }
 
   buildTypes {
     debug {
       signingConfig = signingConfigs.getByName("debugConfig")
+    }
+    release {
+      signingConfig = signingConfigs.getByName("releaseConfig")
+      // Kept off for the first signed release: R8 full-mode needs-keeps tuning
+      // against the Kyant RuntimeShader/reflection paths; enable only with testing.
+      isMinifyEnabled = false
+      isShrinkResources = false
     }
   }
 
